@@ -49,6 +49,13 @@
             <artifactId>ruoyi-framework</artifactId>
         </dependency>
 
+        <!-- MyBatis-Plus（用于解决 com.baomidou.* 注解不可用） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.5.3.1</version>
+        </dependency>
+
         <!-- 定时任务-->
         <dependency>
             <groupId>com.ruoyi</groupId>
