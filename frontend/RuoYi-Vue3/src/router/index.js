@@ -1,6 +1,7 @@
 import { createWebHistory, createRouter } from 'vue-router'
 /* Layout */
 import Layout from '@/layout'
+import eduRouter from './modules/edu'
 
 /**
  * Note: 路由配置项
@@ -83,7 +84,8 @@ export const constantRoutes = [
         meta: { title: '个人中心', icon: 'user' }
       }
     ]
-  }
+  },
+  eduRouter
 ]
 
 // 动态路由，基于用户权限动态去加载

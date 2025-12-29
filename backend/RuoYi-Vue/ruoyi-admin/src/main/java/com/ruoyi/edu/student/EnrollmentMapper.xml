@@ -1,0 +1,127 @@
+<!-- 位置：ruoyi-admin/src/main/resources/mapper/edu/student/EnrollmentMapper.xml -->
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.edu.student.mapper.EnrollmentMapper">
+
+    <resultMap id="EnrollmentResult" type="com.ruoyi.edu.domain.Enrollment">
+        <id     property="enrollmentId"    column="enrollment_id"    />
+        <result property="studentId"       column="student_id"       />
+        <result property="classId"         column="class_id"         />
+        <result property="termId"          column="term_id"          />
+        <result property="status"          column="status"           />
+        <result property="grade"           column="grade"            />
+        <result property="gradeStatus"     column="grade_status"     />
+        <result property="enrollTime"      column="enroll_time"      />
+        <result property="dropTime"        column="drop_time"        />
+        <result property="createBy"        column="create_by"        />
+        <result property="createTime"      column="create_time"      />
+        <result property="updateBy"        column="update_by"        />
+        <result property="updateTime"      column="update_time"      />
+        <result property="remark"          column="remark"           />
+    </resultMap>
+
+    <sql id="selectEnrollmentVo">
+        select enrollment_id, student_id, class_id, term_id, status, grade, grade_status, 
+               enroll_time, drop_time, create_by, create_time, update_by, update_time, remark 
+        from enrollment
+    </sql>
+
+    <!-- 根据ID查询 -->
+    <select id="selectEnrollmentById" parameterType="Long" resultMap="EnrollmentResult">
+        <include refid="selectEnrollmentVo"/>
+        where enrollment_id = #{enrollmentId}
+    </select>
+    
+    <!-- 查询学生和班级的选课记录 -->
+    <select id="selectByStudentAndClass" resultMap="EnrollmentResult">
+        <include refid="selectEnrollmentVo"/>
+        where student_id = #{studentId} and class_id = #{classId}
+        limit 1
+    </select>
+    
+    <!-- 查询学生的所有选课记录 -->
+    <select id="selectByStudentId" parameterType="Long" resultMap="EnrollmentResult">
+        <include refid="selectEnrollmentVo"/>
+        where student_id = #{studentId}
+        order by enroll_time desc
+    </select>
+    
+    <!-- 查询班级的所有选课记录 -->
+    <select id="selectByClassId" parameterType="Long" resultMap="EnrollmentResult">
+        <include refid="selectEnrollmentVo"/>
+        where class_id = #{classId}
+    </select>
+    
+    <!-- 检查学生是否已选某课程 -->
+    <select id="exists" resultType="boolean">
+        select count(*) > 0 from enrollment
+        where student_id = #{studentId} and class_id = #{classId}
+        and status = 'ENROLLED'
+    </select>
+    
+    <!-- 新增选课记录 -->
+    <insert id="insertEnrollment" parameterType="com.ruoyi.edu.domain.Enrollment" useGeneratedKeys="true" keyProperty="enrollmentId">
+        insert into enrollment (
+            student_id, class_id, term_id, status, 
+            grade, grade_status, enroll_time, drop_time,
+            create_by, create_time, update_by, update_time, remark
+        ) values (
+            #{studentId}, #{classId}, #{termId}, #{status},
+            #{grade}, #{gradeStatus}, #{enrollTime}, #{dropTime},
+            #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, #{remark}
+        )
+    </insert>
+    
+    <!-- 更新选课记录 -->
+    <update id="updateEnrollment" parameterType="com.ruoyi.edu.domain.Enrollment">
+        update enrollment
+        <set>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="grade != null">grade = #{grade},</if>
+            <if test="gradeStatus != null and gradeStatus != ''">grade_status = #{gradeStatus},</if>
+            <if test="dropTime != null">drop_time = #{dropTime},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </set>
+        where enrollment_id = #{enrollmentId}
+    </update>
+
+    <!-- 更新班级成绩状态 -->
+    <update id="updateGradeStatusByClass">
+        update enrollment
+        set grade_status = #{gradeStatus}
+        where class_id = #{classId}
+    </update>
+    
+    <!-- 调用存储过程：计算学生学分 -->
+    <select id="callCalcStudentCredits" statementType="CALLABLE">
+        {call sp_calc_student_credits(
+            #{p_student_id, mode=IN, jdbcType=BIGINT},
+            #{p_term_id, mode=IN, jdbcType=VARCHAR},
+            #{p_total_credits, mode=OUT, jdbcType=INTEGER}
+        )}
+    </select>
+
+    <!-- 查询选课记录列表 -->
+    <select id="selectEnrollmentList" parameterType="com.ruoyi.edu.domain.Enrollment" resultMap="EnrollmentResult">
+     <include refid="selectEnrollmentVo"/>
+     <where>  
+          <if test="studentId != null "> and student_id = #{studentId}</if>
+         <if test="classId != null "> and class_id = #{classId}</if>
+         <if test="termId != null  and termId != ''"> and term_id = #{termId}</if>
+         <if test="status != null  and status != ''"> and status = #{status}</if>
+         <if test="grade != null "> and grade = #{grade}</if>
+         <if test="gradeStatus != null  and gradeStatus != ''"> and grade_status = #{gradeStatus}</if>
+     </where>
+    </select>
+
+    <!-- 批量删除选课记录 -->
+    <delete id="deleteEnrollmentByIds" parameterType="String">
+        delete from enrollment where enrollment_id in 
+        <foreach item="enrollmentId" collection="array" open="(" separator="," close=")">
+            #{enrollmentId}
+        </foreach>
+    </delete>
+
+</mapper>
