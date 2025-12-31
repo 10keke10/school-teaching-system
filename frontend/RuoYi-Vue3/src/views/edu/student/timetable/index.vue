@@ -61,15 +61,12 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { getTimetable } from '@/api/edu/student/course'
 
 const currentWeek = ref('1')
-const useMock = ref(true)
-
-const courseList = ref([
-  { courseId: 1, courseName: '计算机基础' },
-  { courseId: 2, courseName: '高等数学' },
-  { courseId: 3, courseName: '大学英语' }
-])
+const useMock = ref(false)
+const slots = ref([])
+const courseList = ref([])
 
 function getCourseColor(courseId) {
   const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399']
@@ -80,39 +77,46 @@ const timetableData = computed(() => {
   const data = []
   for (let i = 1; i <= 12; i++) {
     const row = { timeSlot: i, courses: {} }
-
-    if (i === 1) {
-      row.courses[1] = {
-        courseId: 1,
-        courseName: '计算机基础',
-        time: '1-2节',
-        location: 'A201'
+    slots.value.forEach(slot => {
+      if (slot.start_slot <= i && slot.end_slot >= i) {
+        const courseId = slot.class_id
+        const courseName = slot.course_name || slot.courseName
+        const time = `${slot.start_slot}-${slot.end_slot}节`
+        const location = slot.location
+        const weekDay = slot.week_day
+        row.courses[weekDay] = {
+          courseId,
+          courseName,
+          time,
+          location
+        }
       }
-    }
-    if (i === 3) {
-      row.courses[2] = {
-        courseId: 2,
-        courseName: '高等数学',
-        time: '3-4节',
-        location: 'B301'
-      }
-    }
-    if (i === 5) {
-      row.courses[3] = {
-        courseId: 3,
-        courseName: '大学英语',
-        time: '5-6节',
-        location: 'C101'
-      }
-    }
-
+    })
     data.push(row)
   }
   return data
 })
 
+async function loadTimetable() {
+  try {
+    const res = await getTimetable()
+    const data = res.data || res
+    slots.value = data.slots || []
+    // 收集课程列表用于图例
+    const map = {}
+    slots.value.forEach(s => {
+      const key = s.class_id || s.classId
+      map[key] = s.course_name || s.courseName || `课程${key}`
+    })
+    courseList.value = Object.keys(map).map(id => ({ courseId: Number(id), courseName: map[id] }))
+  } catch (e) {
+    slots.value = []
+    courseList.value = []
+  }
+}
+
 onMounted(() => {
-  console.log('课表页面加载完成')
+  loadTimetable()
 })
 </script>
 

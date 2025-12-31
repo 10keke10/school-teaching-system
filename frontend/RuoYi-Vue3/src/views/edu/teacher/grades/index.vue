@@ -2,18 +2,37 @@
   <div class="app-container">
     <el-card>
       <template #header>
-        <span>成绩管理</span>
+        <div class="card-header">
+          <span>成绩管理</span>
+          <div>
+            <el-select v-model="currentClassId" placeholder="选择班级" @change="loadGrades" style="width: 300px" clearable>
+              <el-option
+                v-for="cls in classOptions"
+                :key="cls.classId"
+                :label="`${cls.courseName} - ${cls.termName}`"
+                :value="cls.classId"
+              />
+            </el-select>
+          </div>
+        </div>
       </template>
-      <el-table :data="gradeList" stripe>
+      <el-table :data="gradeList" stripe v-loading="loading">
+        <el-table-column prop="enrollmentId" label="选课ID" width="100" />
         <el-table-column prop="studentId" label="学号" width="120" />
-        <el-table-column prop="studentName" label="学生" />
-        <el-table-column prop="courseName" label="课程" />
-        <el-table-column prop="grade" label="成绩" width="140">
+        <el-table-column prop="studentName" label="学生姓名" width="150" />
+        <el-table-column prop="grade" label="成绩" width="180">
           <template #default="scope">
-            <el-input-number v-model="scope.row.grade" :min="0" :max="100" size="small" />
+            <el-input-number 
+              v-model="scope.row.grade" 
+              :min="0" 
+              :max="100" 
+              :precision="1"
+              size="small" 
+              style="width: 120px"
+            />
           </template>
         </el-table-column>
-        <el-table-column prop="gradeStatus" label="状态" width="160">
+        <el-table-column prop="gradeStatus" label="状态" width="120">
           <template #default="scope">
             <el-tag :type="scope.row.gradeStatus === 'PUBLISHED' ? 'success' : 'info'">
               {{ scope.row.gradeStatus === 'PUBLISHED' ? '已发布' : '草稿' }}
@@ -22,37 +41,117 @@
         </el-table-column>
       </el-table>
       <div class="actions" style="margin-top: 12px; text-align: right;">
-        <el-button type="primary" @click="handlePublish">发布成绩</el-button>
+        <el-button type="primary" @click="handleSave" :disabled="!currentClassId">保存成绩</el-button>
+        <el-button type="success" @click="handlePublish" :disabled="!currentClassId">发布成绩</el-button>
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { getMyClasses, getClassStudents, batchUpdateGrades, publishGrades } from '@/api/edu/teacher'
 
-const gradeList = ref([
-  {
-    studentId: 'S2001',
-    studentName: '张三',
-    courseName: '计算机基础',
-    grade: 95,
-    gradeStatus: 'PUBLISHED'
-  },
-  {
-    studentId: 'S2002',
-    studentName: '李四',
-    courseName: '计算机基础',
-    grade: 87,
-    gradeStatus: 'DRAFT'
+const loading = ref(false)
+const gradeList = ref([])
+const currentClassId = ref(null)
+const classOptions = ref([])
+
+async function loadClasses() {
+  try {
+    const res = await getMyClasses('')
+    const data = res.data || res
+    classOptions.value = (data || []).map(item => ({
+      classId: item.class_id || item.classId,
+      courseName: item.course_name || item.courseName,
+      termName: item.term_name || item.termName
+    }))
+    if (classOptions.value.length > 0 && !currentClassId.value) {
+      currentClassId.value = classOptions.value[0].classId
+      loadGrades()
+    }
+  } catch (e) {
+    ElMessage.error('获取班级列表失败')
   }
-])
-
-function handlePublish() {
-  gradeList.value.forEach(item => {
-    item.gradeStatus = 'PUBLISHED'
-  })
-  ElMessage.success('成绩发布成功（开发模式）')
 }
+
+async function loadGrades() {
+  if (!currentClassId.value) {
+    gradeList.value = []
+    return
+  }
+  loading.value = true
+  try {
+    const res = await getClassStudents(currentClassId.value)
+    const rows = res.rows || res.data?.rows || []
+    gradeList.value = rows.map(item => ({
+      enrollmentId: item.enrollmentId || item.enrollment_id,
+      studentId: item.studentId || item.student_id,
+      studentName: item.studentName || `学生${item.studentId || item.student_id}`,
+      grade: item.grade,
+      gradeStatus: item.gradeStatus || item.grade_status || 'DRAFT'
+    }))
+  } catch (e) {
+    ElMessage.error('获取学生成绩失败')
+    gradeList.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleSave() {
+  if (!currentClassId.value) {
+    ElMessage.warning('请先选择班级')
+    return
+  }
+  try {
+    await batchUpdateGrades(
+      gradeList.value.map(item => ({
+        enrollmentId: item.enrollmentId,
+        grade: item.grade,
+        gradeStatus: item.gradeStatus
+      }))
+    )
+    ElMessage.success('成绩保存成功')
+  } catch (e) {
+    ElMessage.error('成绩保存失败')
+  }
+}
+
+async function handlePublish() {
+  if (!currentClassId.value) {
+    ElMessage.warning('请先选择班级')
+    return
+  }
+  try {
+    // 先批量保存成绩
+    await batchUpdateGrades(
+      gradeList.value.map(item => ({
+        enrollmentId: item.enrollmentId,
+        grade: item.grade,
+        gradeStatus: item.gradeStatus
+      }))
+    )
+    await publishGrades({ classId: currentClassId.value })
+    gradeList.value.forEach(item => {
+      item.gradeStatus = 'PUBLISHED'
+    })
+    ElMessage.success('成绩发布成功')
+  } catch (e) {
+    ElMessage.error('成绩发布失败')
+  }
+}
+
+onMounted(() => {
+  loadClasses()
+})
 </script>
+
+<style scoped>
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+</style>

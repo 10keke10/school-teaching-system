@@ -120,9 +120,9 @@ const loading = ref(true)
 const total = ref(0)
 const courseList = ref([])
 const showSearch = ref(true)
-const useMock = ref(true) // 开发阶段使用Mock
+const useMock = ref(false)
 
-// 学期选项（开发阶段Mock）
+// 学期选项（可按需从后端拉取，这里先固定两条）
 const termOptions = ref([
   { termId: '2024-2025-1', termName: '2024-2025秋季学期' },
   { termId: '2024-2025-2', termName: '2024-2025冬季学期' }
@@ -131,22 +131,29 @@ const termOptions = ref([
 /** 查询课程列表 */
 function getList() {
   loading.value = true
-
-  if (useMock.value) {
-    courseList.value = getMockCourseList()
-    total.value = courseList.value.length
-    loading.value = false
-    return
-  }
-
   listAvailableCourses(queryParams)
-    .then(response => {
-      courseList.value = response.rows
-      total.value = response.total
+    .then(res => {
+      const data = res.data || res
+      courseList.value = (data.rows || []).map(item => {
+        return {
+          classId: item.class_id || item.classId,
+          courseCode: item.course_code || item.courseCode,
+          courseName: item.course_name || item.courseName,
+          classTime: item.class_time || item.classTime,
+          location: item.location,
+          teacherName: item.teacher_name || item.teacherName,
+          creditHours: item.credit_hours || item.creditHours,
+          capacity: item.capacity,
+          selectedCount: item.selected_count || item.selectedCount || 0,
+          enrolled: !!item.enrollment_id || item.enrollment_status === 'ENROLLED' || item.enrolled,
+          enrollmentId: item.enrollment_id || item.enrollmentId
+        }
+      })
+      total.value = data.total || courseList.value.length
     })
     .catch(() => {
-      courseList.value = getMockCourseList()
-      total.value = courseList.value.length
+      courseList.value = []
+      total.value = 0
     })
     .finally(() => {
       loading.value = false
@@ -154,51 +161,6 @@ function getList() {
 }
 
 /** Mock数据 */
-function getMockCourseList() {
-  return [
-    {
-      classId: 1,
-      courseCode: 'CS101',
-      courseName: '计算机基础',
-      classTime: '周一 1-2节',
-      location: '教学楼A201',
-      teacherName: '张老师',
-      creditHours: 3,
-      capacity: 60,
-      selectedCount: 30,
-      enrolled: false,
-      termId: '2024-2025-1'
-    },
-    {
-      classId: 2,
-      courseCode: 'MATH201',
-      courseName: '高等数学',
-      classTime: '周二 3-4节',
-      location: '教学楼B301',
-      teacherName: '李老师',
-      creditHours: 4,
-      capacity: 50,
-      selectedCount: 50,
-      enrolled: false,
-      termId: '2024-2025-1'
-    },
-    {
-      classId: 3,
-      courseCode: 'ENG301',
-      courseName: '大学英语',
-      classTime: '周三 5-6节',
-      location: '教学楼C101',
-      teacherName: '王老师',
-      creditHours: 2,
-      capacity: 40,
-      selectedCount: 20,
-      enrolled: true,
-      termId: '2024-2025-1',
-      enrollmentId: 1
-    }
-  ]
-}
-
 /** 搜索 */
 function handleQuery() {
   queryParams.pageNum = 1
@@ -225,14 +187,6 @@ function handleSelectionChange() {
 /** 选课 */
 function handleEnroll(row) {
   const classId = row.classId
-
-  if (useMock.value) {
-    row.enrolled = true
-    row.selectedCount += 1
-    ElMessage.success(`模拟选课成功：${row.courseName}`)
-    return
-  }
-
   enrollCourse({ classId })
     .then(response => {
       ElMessage.success(response.msg || '选课成功')
@@ -245,15 +199,11 @@ function handleEnroll(row) {
 
 /** 退课 */
 function handleDrop(row) {
-  const enrollmentId = row.enrollmentId || 1 // Mock数据
-
-  if (useMock.value) {
-    row.enrolled = false
-    row.selectedCount = Math.max(0, row.selectedCount - 1)
-    ElMessage.success(`模拟退课成功：${row.courseName}`)
+  const enrollmentId = row.enrollmentId
+  if (!enrollmentId) {
+    ElMessage.error('缺少选课记录ID，无法退课')
     return
   }
-
   dropCourse(enrollmentId)
     .then(response => {
       ElMessage.success(response.msg || '退课成功')

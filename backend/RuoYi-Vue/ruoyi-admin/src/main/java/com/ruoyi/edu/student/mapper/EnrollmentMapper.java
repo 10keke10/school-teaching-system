@@ -56,7 +56,37 @@ public interface EnrollmentMapper {
      * 调用存储过程：计算学生学分
      */
     void callCalcStudentCredits(Map<String, Object> params);
-    
+
+    /**
+     * 统计班级已选人数（只统计ENROLLED）
+     */
+    int countEnrolledByClassId(Long classId);
+
+    /**
+     * 查询某学生是否已有此班级的有效选课记录
+     */
+    Enrollment selectActiveByStudentAndClass(@Param("studentId") Long studentId,
+                                             @Param("classId") Long classId);
+
+    /**
+     * 查询学生当前已选（ENROLLED）课程的时间槽，用于冲突检测
+     */
+    List<Long> selectActiveClassIdsByStudent(Long studentId);
+
+    /**
+     * 查询学生成绩列表（可按学期/状态过滤）
+     */
+    List<Enrollment> selectStudentGrades(@Param("studentId") Long studentId,
+                                         @Param("termId") String termId,
+                                         @Param("gradeStatus") String gradeStatus);
+
+    /**
+     * 成绩视图（含课程名称）
+     */
+    List<Map<String, Object>> selectStudentGradeView(@Param("studentId") Long studentId,
+                                                     @Param("termId") String termId,
+                                                     @Param("gradeStatus") String gradeStatus);
+
     /**
      * 检查学生是否已选某课程
      */
@@ -72,4 +102,9 @@ public interface EnrollmentMapper {
      * 批量删除选课记录
      */
     int deleteEnrollmentByIds(Long[] enrollmentIds);
+
+    /**
+     * 查询班级成绩统计（平均分等）
+     */
+    Map<String, Object> selectClassGradeStatistics(@Param("classId") Long classId);
 }

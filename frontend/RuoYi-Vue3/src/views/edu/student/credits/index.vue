@@ -155,9 +155,11 @@
 <script setup name="StudentCredits">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { getStudentCredits } from '@/api/edu/student/course'
+import useUserStore from '@/store/modules/user'
 
 const loading = ref(false)
-const useMock = ref(true)
+const useMock = ref(false)
 const currentTerm = ref('2024-2025-1')
 
 const termOptions = ref([
@@ -260,7 +262,7 @@ const customColors = [
   { color: '#F56C6C', percentage: 100 }
 ]
 
-function loadCreditStats() {
+async function loadCreditStats() {
   loading.value = true
 
   if (useMock.value) {
@@ -278,8 +280,21 @@ function loadCreditStats() {
     return
   }
 
-  // 集成阶段可在此调用真实接口
-  loading.value = false
+  try {
+    const userStore = useUserStore()
+    const studentId = userStore.id || 0
+    const res = await getStudentCredits(studentId, currentTerm.value)
+    const data = res.data || res
+    creditInfo.termId = data.termId
+    creditInfo.currentCredits = data.totalCredits || data.currentCredits || 0
+    creditInfo.maxCredits = data.maxCredits || 20
+    creditInfo.status = data.status || (creditInfo.currentCredits >= creditInfo.maxCredits ? '已满' : '可选')
+  } catch (e) {
+    useMock.value = true
+    ElMessage.error('学分统计获取失败，已回退为本地数据')
+  } finally {
+    loading.value = false
+  }
 }
 
 function getProgressStatus(val) {

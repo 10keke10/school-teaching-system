@@ -52,6 +52,21 @@ public interface IEnrollmentService {
     Map<String, Object> getStudentCreditInfo(Long studentId, String termId);
 
     /**
+     * 可选课程列表（含是否已选、容量等）
+     */
+    Map<String, Object> listAvailableCourses(Long studentId, String termId);
+
+    /**
+     * 学生课表数据
+     */
+    Map<String, Object> getStudentTimetable(Long studentId);
+
+    /**
+     * 学生成绩列表
+     */
+    List<Map<String, Object>> getStudentGrades(Long studentId, String termId, String gradeStatus);
+
+    /**
      * 查询选课记录列表
      */
     List<Enrollment> selectEnrollmentList(Enrollment enrollment);
@@ -75,4 +90,9 @@ public interface IEnrollmentService {
      * 批量删除选课记录
      */
     int deleteEnrollmentByIds(Long[] enrollmentIds);
+
+    /**
+     * 获取班级成绩统计信息（平均分等）
+     */
+    Map<String, Object> getClassGradeStatistics(Long classId);
 }

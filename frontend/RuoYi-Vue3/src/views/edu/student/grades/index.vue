@@ -31,6 +31,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { getStudentGrades } from '@/api/edu/student/course'
 
 const gradeList = ref([])
 const loading = ref(false)
@@ -44,37 +45,24 @@ function getGradeTagType(grade) {
   return 'danger'
 }
 
-function loadGradeList() {
+async function loadGradeList() {
   loading.value = true
-
-  gradeList.value = [
-    {
-      termName: '2024-2025-1',
-      courseName: '计算机基础',
-      courseType: '必修',
-      creditHours: 3,
-      grade: 92,
-      gradeStatus: 'PUBLISHED'
-    },
-    {
-      termName: '2024-2025-1',
-      courseName: '高等数学',
-      courseType: '必修',
-      creditHours: 4,
-      grade: 78,
-      gradeStatus: 'PUBLISHED'
-    },
-    {
-      termName: '2024-2025-1',
-      courseName: '大学英语',
-      courseType: '选修',
-      creditHours: 2,
-      grade: null,
-      gradeStatus: 'DRAFT'
-    }
-  ]
-
-  loading.value = false
+  try {
+    const res = await getStudentGrades({ gradeStatus: '', termId: '' })
+    const data = res.data || res
+    gradeList.value = (data || []).map(item => ({
+      termName: item.term_id || item.termName,
+      courseName: item.course_name || item.courseName,
+      courseType: item.course_type || item.courseType || '必修',
+      creditHours: item.credit_hours || item.creditHours,
+      grade: item.grade,
+      gradeStatus: item.grade_status || item.gradeStatus
+    }))
+  } catch (e) {
+    gradeList.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(loadGradeList)

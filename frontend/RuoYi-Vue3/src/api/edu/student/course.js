@@ -25,3 +25,29 @@ export function dropCourse(enrollmentId) {
     method: 'post'
   })
 }
+
+// 学生课表
+export function getTimetable() {
+  return request({
+    url: '/edu/student/timetable',
+    method: 'get'
+  })
+}
+
+// 成绩查询
+export function getStudentGrades(query) {
+  return request({
+    url: '/edu/student/grades',
+    method: 'get',
+    params: query
+  })
+}
+
+// 学分统计
+export function getStudentCredits(studentId, termId) {
+  return request({
+    url: `/edu/statistics/student/${studentId}/credits`,
+    method: 'get',
+    params: { term_id: termId }
+  })
+}

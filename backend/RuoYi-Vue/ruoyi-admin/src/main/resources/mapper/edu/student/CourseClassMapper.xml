@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.edu.student.mapper.CourseClassMapper">
+
+    <resultMap id="CourseClassResult" type="com.ruoyi.edu.domain.CourseClass">
+        <id property="classId" column="class_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="teacherId" column="teacher_id"/>
+        <result property="termId" column="term_id"/>
+        <result property="classTime" column="class_time"/>
+        <result property="location" column="location"/>
+        <result property="capacity" column="capacity"/>
+        <result property="selectedCount" column="selected_count"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <select id="selectCourseClassById" parameterType="Long" resultMap="CourseClassResult">
+        select * from course_class where class_id = #{classId}
+    </select>
+
+    <select id="selectAvailableCourses" resultType="map">
+        select
+            cc.class_id,
+            cc.course_id,
+            cc.teacher_id,
+            cc.term_id,
+            cc.class_time,
+            cc.location,
+            cc.capacity,
+            cc.selected_count,
+            cc.status,
+            c.course_name,
+            c.course_code,
+            c.credit_hours,
+            e.enrollment_id,
+            e.status as enrollment_status,
+            e.grade_status,
+            e.grade
+        from course_class cc
+            left join course c on cc.course_id = c.course_id
+            left join enrollment e on e.class_id = cc.class_id
+                 and e.student_id = #{studentId}
+                 and e.status = 'ENROLLED'
+        where cc.status = 1
+        <if test="termId != null and termId != ''">
+            and cc.term_id = #{termId}
+        </if>
+        order by cc.class_id asc
+    </select>
+
+    <select id="selectCourseInfo" resultType="map">
+        select
+            cc.class_id,
+            cc.term_id,
+            cc.teacher_id,
+            cc.capacity,
+            cc.selected_count,
+            cc.status,
+            cc.class_time,
+            cc.location,
+            c.course_id,
+            c.course_name,
+            c.course_code,
+            c.credit_hours
+        from course_class cc
+            left join course c on cc.course_id = c.course_id
+        where cc.class_id = #{classId}
+        limit 1
+    </select>
+
+    <update id="increaseSelectedCount">
+        update course_class
+        set selected_count = selected_count + 1
+        where class_id = #{classId} and selected_count &lt; capacity
+    </update>
+
+    <update id="decreaseSelectedCount">
+        update course_class
+        set selected_count = case when selected_count &gt; 0 then selected_count - 1 else 0 end
+        where class_id = #{classId}
+    </update>
+
+    <select id="selectClassesByTeacherId" resultType="map">
+        select
+            cc.class_id,
+            cc.course_id,
+            cc.teacher_id,
+            cc.term_id,
+            cc.class_time,
+            cc.location,
+            cc.capacity,
+            cc.selected_count,
+            cc.status,
+            c.course_name,
+            c.course_code,
+            c.credit_hours,
+            t.term_name,
+            (SELECT COUNT(*) FROM enrollment e WHERE e.class_id = cc.class_id AND e.status = 'ENROLLED') as student_count
+        from course_class cc
+            left join course c on cc.course_id = c.course_id
+            left join term t on cc.term_id = t.term_id
+        where cc.teacher_id = #{teacherId}
+        <if test="termId != null and termId != ''">
+            and cc.term_id = #{termId}
+        </if>
+        order by cc.term_id desc, cc.class_id asc
+    </select>
+
+</mapper>

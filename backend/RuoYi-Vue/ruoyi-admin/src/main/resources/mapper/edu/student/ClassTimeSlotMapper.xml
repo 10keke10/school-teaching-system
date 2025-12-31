@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.edu.student.mapper.ClassTimeSlotMapper">
+
+    <resultMap id="ClassTimeSlotResult" type="com.ruoyi.edu.domain.ClassTimeSlot">
+        <id property="slotId" column="slot_id"/>
+        <result property="classId" column="class_id"/>
+        <result property="weekDay" column="week_day"/>
+        <result property="startSlot" column="start_slot"/>
+        <result property="endSlot" column="end_slot"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <select id="selectByClassId" parameterType="Long" resultMap="ClassTimeSlotResult">
+        select * from class_time_slot where class_id = #{classId}
+        order by week_day, start_slot
+    </select>
+
+    <select id="selectByStudentId" parameterType="Long" resultMap="ClassTimeSlotResult">
+        select ts.*
+        from class_time_slot ts
+        inner join enrollment e on ts.class_id = e.class_id
+        where e.student_id = #{studentId}
+          and e.status = 'ENROLLED'
+        order by ts.week_day, ts.start_slot
+    </select>
+
+    <select id="selectTimetableByStudent" parameterType="Long" resultType="map">
+        select
+            ts.slot_id,
+            ts.class_id,
+            ts.week_day,
+            ts.start_slot,
+            ts.end_slot,
+            cc.class_time,
+            cc.location,
+            c.course_name
+        from class_time_slot ts
+            inner join enrollment e on ts.class_id = e.class_id
+            inner join course_class cc on cc.class_id = ts.class_id
+            left join course c on c.course_id = cc.course_id
+        where e.student_id = #{studentId}
+          and e.status = 'ENROLLED'
+        order by ts.week_day, ts.start_slot
+    </select>
+
+</mapper>
