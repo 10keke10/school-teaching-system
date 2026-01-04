@@ -139,7 +139,32 @@ public class SysMenuServiceImpl implements ISysMenuService
         {
             menus = menuMapper.selectMenuTreeByUserId(userId);
         }
-        return getChildPerms(menus, 0);
+        List<SysMenu> tree = getChildPerms(menus, 0);
+        if (!SecurityUtils.isAdmin(userId))
+        {
+            List<SysMenu> flattened = new ArrayList<SysMenu>();
+            for (SysMenu m : tree)
+            {
+                if ("教务管理".equals(m.getMenuName()))
+                {
+                    List<SysMenu> children = m.getChildren();
+                    if (StringUtils.isNotEmpty(children))
+                    {
+                        for (SysMenu c : children)
+                        {
+                            c.setParentId(0L);
+                            flattened.add(c);
+                        }
+                    }
+                }
+                else
+                {
+                    flattened.add(m);
+                }
+            }
+            return flattened;
+        }
+        return tree;
     }
 
     /**
