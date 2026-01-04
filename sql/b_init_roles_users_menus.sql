@@ -186,7 +186,7 @@ WHERE rm.role_id IN (3, 4)
 GROUP BY rm.role_id, r.role_name;
 
 SELECT '=== 配置完成！可以使用以下账号登录测试 ===' as info;
-SELECT '学生账号：b_student2001 ~ b_student2010，密码：123456' as student_accounts;
-SELECT '教师账号：b_teacher1001 ~ b_teacher1008，密码：123456' as teacher_accounts;
+SELECT '学生账号：b_student2001 ~ b_student2010，密码：admin123' as student_accounts;
+SELECT '教师账号：b_teacher1001 ~ b_teacher1008，密码：admin123' as teacher_accounts;
 SELECT '注意：所有B负责的数据已添加b_前缀标识' as note;
 

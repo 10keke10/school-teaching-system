@@ -1,6 +1,7 @@
 package com.ruoyi.edu.domain;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.ruoyi.common.annotation.Excel;
@@ -58,6 +59,14 @@ public class CourseClass extends BaseEntity {
     @Excel(name = "备注")
     private String remark;
 
+    /** 数据隔离前缀（不持久化） */
+    @TableField(exist = false)
+    private String dataScopeTermPrefix;
+
+    /** 用户搜索关键字（不持久化） */
+    @TableField(exist = false)
+    private String userTermSearch;
+
     // ============ Getter和Setter方法 ============
     public Long getClassId() {
         return classId;
@@ -97,6 +106,22 @@ public class CourseClass extends BaseEntity {
 
     public void setClassTime(String classTime) {
         this.classTime = classTime;
+    }
+
+    public String getDataScopeTermPrefix() {
+        return dataScopeTermPrefix;
+    }
+
+    public void setDataScopeTermPrefix(String dataScopeTermPrefix) {
+        this.dataScopeTermPrefix = dataScopeTermPrefix;
+    }
+
+    public String getUserTermSearch() {
+        return userTermSearch;
+    }
+
+    public void setUserTermSearch(String userTermSearch) {
+        this.userTermSearch = userTermSearch;
     }
 
     public String getLocation() {

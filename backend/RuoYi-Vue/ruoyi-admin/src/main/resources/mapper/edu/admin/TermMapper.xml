@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.edu.admin.mapper.TermMapper">
+    
+    <resultMap type="Term" id="TermResult">
+        <result property="termId"    column="term_id"    />
+        <result property="termName"    column="term_name"    />
+        <result property="enrollStart"    column="enroll_start"    />
+        <result property="enrollEnd"    column="enroll_end"    />
+        <result property="dropDeadline"    column="drop_deadline"    />
+        <result property="isActive"    column="is_active"    />
+        <result property="remark"    column="remark"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectTermVo">
+        select term_id, term_name, enroll_start, enroll_end, drop_deadline, is_active, remark, create_by, create_time, update_by, update_time from term
+    </sql>
+
+    <select id="selectTermList" parameterType="Term" resultMap="TermResult">
+        <include refid="selectTermVo"/>
+        <where>  
+            <if test="termId != null  and termId != ''"> and term_id like concat('%', #{termId}, '%')</if>
+            <if test="termName != null  and termName != ''"> and term_name like concat('%', #{termName}, '%')</if>
+            <if test="isActive != null "> and is_active = #{isActive}</if>
+        </where>
+    </select>
+    
+    <select id="selectTermByTermId" parameterType="String" resultMap="TermResult">
+        <include refid="selectTermVo"/>
+        where term_id = #{termId}
+    </select>
+        
+    <insert id="insertTerm" parameterType="Term">
+        insert into term
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="termId != null">term_id,</if>
+            <if test="termName != null">term_name,</if>
+            <if test="enrollStart != null">enroll_start,</if>
+            <if test="enrollEnd != null">enroll_end,</if>
+            <if test="dropDeadline != null">drop_deadline,</if>
+            <if test="isActive != null">is_active,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="termId != null">#{termId},</if>
+            <if test="termName != null">#{termName},</if>
+            <if test="enrollStart != null">#{enrollStart},</if>
+            <if test="enrollEnd != null">#{enrollEnd},</if>
+            <if test="dropDeadline != null">#{dropDeadline},</if>
+            <if test="isActive != null">#{isActive},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTerm" parameterType="Term">
+        update term
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="termName != null">term_name = #{termName},</if>
+            <if test="enrollStart != null">enroll_start = #{enrollStart},</if>
+            <if test="enrollEnd != null">enroll_end = #{enrollEnd},</if>
+            <if test="dropDeadline != null">drop_deadline = #{dropDeadline},</if>
+            <if test="isActive != null">is_active = #{isActive},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where term_id = #{termId}
+    </update>
+
+    <delete id="deleteTermByTermId" parameterType="String">
+        delete from term where term_id = #{termId}
+    </delete>
+
+    <delete id="deleteTermByTermIds" parameterType="String">
+        delete from term where term_id in 
+        <foreach item="termId" collection="array" open="(" separator="," close=")">
+            #{termId}
+        </foreach>
+    </delete>
+</mapper>

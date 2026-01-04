@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.edu.admin.mapper.CreditRuleMapper">
+    
+    <resultMap type="CreditRule" id="CreditRuleResult">
+        <result property="ruleId"    column="rule_id"    />
+        <result property="ruleName"    column="rule_name"    />
+        <result property="termId"    column="term_id"    />
+        <result property="maxCredits"    column="max_credits"    />
+        <result property="minCredits"    column="min_credits"    />
+        <result property="isActive"    column="is_active"    />
+        <result property="remark"    column="remark"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectCreditRuleVo">
+        select rule_id, rule_name, term_id, max_credits, min_credits, is_active, remark, create_by, create_time, update_by, update_time from credit_rule
+    </sql>
+
+    <select id="selectCreditRuleList" parameterType="CreditRule" resultMap="CreditRuleResult">
+        <include refid="selectCreditRuleVo"/>
+        <where>  
+            <if test="ruleName != null  and ruleName != ''"> and rule_name like concat('%', #{ruleName}, '%')</if>
+            <if test="termId != null  and termId != ''"> and term_id like concat('%', #{termId}, '%')</if>
+            <if test="isActive != null "> and is_active = #{isActive}</if>
+        </where>
+    </select>
+    
+    <select id="selectCreditRuleByRuleId" parameterType="Long" resultMap="CreditRuleResult">
+        <include refid="selectCreditRuleVo"/>
+        where rule_id = #{ruleId}
+    </select>
+        
+    <insert id="insertCreditRule" parameterType="CreditRule" useGeneratedKeys="true" keyProperty="ruleId">
+        insert into credit_rule
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="ruleName != null">rule_name,</if>
+            <if test="termId != null">term_id,</if>
+            <if test="maxCredits != null">max_credits,</if>
+            <if test="minCredits != null">min_credits,</if>
+            <if test="isActive != null">is_active,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="ruleName != null">#{ruleName},</if>
+            <if test="termId != null">#{termId},</if>
+            <if test="maxCredits != null">#{maxCredits},</if>
+            <if test="minCredits != null">#{minCredits},</if>
+            <if test="isActive != null">#{isActive},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCreditRule" parameterType="CreditRule">
+        update credit_rule
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="ruleName != null">rule_name = #{ruleName},</if>
+            <if test="termId != null">term_id = #{termId},</if>
+            <if test="maxCredits != null">max_credits = #{maxCredits},</if>
+            <if test="minCredits != null">min_credits = #{minCredits},</if>
+            <if test="isActive != null">is_active = #{isActive},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where rule_id = #{ruleId}
+    </update>
+
+    <delete id="deleteCreditRuleByRuleId" parameterType="Long">
+        delete from credit_rule where rule_id = #{ruleId}
+    </delete>
+
+    <delete id="deleteCreditRuleByRuleIds" parameterType="String">
+        delete from credit_rule where rule_id in 
+        <foreach item="ruleId" collection="array" open="(" separator="," close=")">
+            #{ruleId}
+        </foreach>
+    </delete>
+</mapper>

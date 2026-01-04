@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.edu.admin.mapper.AdminCourseClassMapper">
+    
+    <resultMap type="CourseClass" id="CourseClassResult">
+        <result property="classId"    column="class_id"    />
+        <result property="courseId"    column="course_id"    />
+        <result property="teacherId"    column="teacher_id"    />
+        <result property="termId"    column="term_id"    />
+        <result property="classTime"    column="class_time"    />
+        <result property="location"    column="location"    />
+        <result property="capacity"    column="capacity"    />
+        <result property="selectedCount"    column="selected_count"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectCourseClassVo">
+        select class_id, course_id, teacher_id, term_id, class_time, location, capacity, selected_count, status, create_by, create_time, update_by, update_time, remark 
+        from course_class
+    </sql>
+
+    <select id="selectCourseClassList" parameterType="CourseClass" resultMap="CourseClassResult">
+        <include refid="selectCourseClassVo"/>
+        <where>  
+            <if test="courseClass.courseId != null "> and course_id = #{courseClass.courseId}</if>
+            <if test="courseClass.teacherId != null "> and teacher_id = #{courseClass.teacherId}</if>
+            <if test="courseClass.termId != null  and courseClass.termId != ''"> and term_id like #{courseClass.termId}</if>
+            <if test="courseClass.status != null "> and status = #{courseClass.status}</if>
+            <if test="courseClass.classTime != null  and courseClass.classTime != ''"> and class_time like concat('%', #{courseClass.classTime}, '%')</if>
+        </where>
+    </select>
+
+    <!-- 手动定义Count查询，解决PageHelper自动生成Count查询可能出现的NPE问题 -->
+    <select id="selectCourseClassList_COUNT" resultType="Long">
+        select count(1)
+        from course_class
+        <where>  
+            <if test="courseClass.courseId != null "> and course_id = #{courseClass.courseId}</if>
+            <if test="courseClass.teacherId != null "> and teacher_id = #{courseClass.teacherId}</if>
+            <if test="courseClass.termId != null  and courseClass.termId != ''"> and term_id like #{courseClass.termId}</if>
+            <if test="courseClass.status != null "> and status = #{courseClass.status}</if>
+            <if test="courseClass.classTime != null  and courseClass.classTime != ''"> and class_time like concat('%', #{courseClass.classTime}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectCourseClassById" parameterType="Long" resultMap="CourseClassResult">
+        <include refid="selectCourseClassVo"/>
+        where class_id = #{classId}
+    </select>
+        
+    <insert id="insertCourseClass" parameterType="CourseClass" useGeneratedKeys="true" keyProperty="classId">
+        insert into course_class
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="courseId != null">course_id,</if>
+            <if test="teacherId != null">teacher_id,</if>
+            <if test="termId != null">term_id,</if>
+            <if test="classTime != null">class_time,</if>
+            <if test="location != null">location,</if>
+            <if test="capacity != null">capacity,</if>
+            <if test="selectedCount != null">selected_count,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="courseId != null">#{courseId},</if>
+            <if test="teacherId != null">#{teacherId},</if>
+            <if test="termId != null">#{termId},</if>
+            <if test="classTime != null">#{classTime},</if>
+            <if test="location != null">#{location},</if>
+            <if test="capacity != null">#{capacity},</if>
+            <if test="selectedCount != null">#{selectedCount},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCourseClass" parameterType="CourseClass">
+        update course_class
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="courseId != null">course_id = #{courseId},</if>
+            <if test="teacherId != null">teacher_id = #{teacherId},</if>
+            <if test="termId != null">term_id = #{termId},</if>
+            <if test="classTime != null">class_time = #{classTime},</if>
+            <if test="location != null">location = #{location},</if>
+            <if test="capacity != null">capacity = #{capacity},</if>
+            <if test="selectedCount != null">selected_count = #{selectedCount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where class_id = #{classId}
+    </update>
+
+    <delete id="deleteCourseClassById" parameterType="Long">
+        delete from course_class where class_id = #{classId}
+    </delete>
+
+    <delete id="deleteCourseClassByIds" parameterType="String">
+        delete from course_class where class_id in 
+        <foreach item="classId" collection="array" open="(" separator="," close=")">
+            #{classId}
+        </foreach>
+    </delete>
+    
+</mapper>
