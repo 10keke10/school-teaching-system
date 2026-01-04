@@ -42,9 +42,47 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
         if (courseClass.getStatus() != null && courseClass.getStatus() != 1) {
             return AjaxResult.error("课程未开放选课");
         }
-        // 重复选课
-        if (enrollmentMapper.selectActiveByStudentAndClass(studentId, classId) != null) {
-            return AjaxResult.error("已选该课程，不能重复选课");
+        // 重复选课（存在已选记录）
+        Enrollment existed = enrollmentMapper.selectByStudentAndClass(studentId, classId);
+        if (existed != null) {
+            if ("ENROLLED".equals(existed.getStatus())) {
+                return AjaxResult.error("已选该课程，不能重复选课");
+            }
+            if ("DROPPED".equals(existed.getStatus())) {
+                // 退课后再次选同一班级，直接恢复原记录避免唯一键冲突
+                // 同学期同课程号校验
+                if (enrollmentMapper.existsSameCourseInTerm(studentId, classId)) {
+                    return AjaxResult.error("同一学期不能选多个同一课程号的课程");
+                }
+                // 时间冲突校验
+                if (checkTimeConflict(studentId, classId)) {
+                    return AjaxResult.error("与已有课程时间冲突");
+                }
+                // 学分上限校验
+                Map<String, Object> courseInfoRe = courseClassMapper.selectCourseInfo(classId);
+                int creditHoursRe = courseInfoRe != null && courseInfoRe.get("credit_hours") != null
+                        ? Integer.parseInt(courseInfoRe.get("credit_hours").toString())
+                        : 0;
+                if (!checkCreditLimit(studentId, courseClass.getTermId(), creditHoursRe)) {
+                    return AjaxResult.error("超过学分上限，无法选课");
+                }
+                existed.setStatus("ENROLLED");
+                existed.setDropTime(null);
+                existed.setEnrollTime(new Date());
+                existed.setGradeStatus("DRAFT");
+                existed.setUpdateTime(new Date());
+                int updated = enrollmentMapper.updateEnrollment(existed);
+                if (updated > 0) {
+                    courseClassMapper.increaseSelectedCount(classId);
+                    return AjaxResult.success("选课成功");
+                }
+                return AjaxResult.error("选课失败");
+            }
+            // 其他状态一律视为不可重复选
+            return AjaxResult.error("已存在该课程记录，无法重复选课");
+        }
+        if (enrollmentMapper.existsSameCourseInTerm(studentId, classId)) {
+            return AjaxResult.error("同一学期不能选多个同一课程号的课程");
         }
         // 时间冲突校验
         if (checkTimeConflict(studentId, classId)) {
@@ -79,7 +117,7 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             // 捕获数据库完整性约束异常（可能是触发器抛出的容量已满错误）
             String errorMsg = e.getMessage();
-            if (errorMsg != null && (errorMsg.contains("容量") || errorMsg.contains("capacity") 
+            if (errorMsg != null && (errorMsg.contains("容量") || errorMsg.contains("capacity")
                     || errorMsg.contains("已满") || errorMsg.contains("full"))) {
                 return AjaxResult.error("课程容量已满，无法选课");
             }
@@ -89,7 +127,7 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
         } catch (Exception e) {
             // 捕获其他异常
             String errorMsg = e.getMessage();
-            if (errorMsg != null && (errorMsg.contains("容量") || errorMsg.contains("capacity") 
+            if (errorMsg != null && (errorMsg.contains("容量") || errorMsg.contains("capacity")
                     || errorMsg.contains("已满") || errorMsg.contains("full"))) {
                 return AjaxResult.error("课程容量已满，无法选课");
             }

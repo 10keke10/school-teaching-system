@@ -77,7 +77,7 @@ public class EduStudentController extends BaseController {
     @PreAuthorize("@ss.hasPermi('edu:student:grades')")
     @GetMapping("/grades")
     public AjaxResult getGrades(@RequestParam(required = false) String termId,
-                                @RequestParam(required = false) String gradeStatus) {
+            @RequestParam(required = false) String gradeStatus) {
         Long studentId = getCurrentStudentId();
         return AjaxResult.success(enrollmentService.getStudentGrades(studentId, termId, gradeStatus));
     }

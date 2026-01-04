@@ -31,25 +31,22 @@ VALUES
 
 -- 删除已存在的教务菜单（如果存在）
 DELETE FROM sys_menu WHERE menu_id >= 2000 AND menu_id < 3000;
-
--- 一级菜单：教务管理（B负责的数据统一加b_前缀标识）
-INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark) 
-VALUES 
-(2000, '教务管理', 0, 5, 'edu', NULL, '', '', 1, 0, 'M', '0', '0', '', 'education', 'b_admin', NOW(), '[B]教务管理目录');
+-- 额外删除可能存在的“教务管理”目录（按名称删除，防止残留）
+DELETE FROM sys_menu WHERE menu_name = '教务管理';
 
 -- 二级菜单：学生模块（B负责的数据统一加b_前缀标识）
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark) 
 VALUES 
-(2001, '可选课程', 2000, 1, 'student/course', 'edu/student/course/index', '', 'StudentCourse', 1, 0, 'C', '0', '0', 'edu:student:course', 'course', 'b_admin', NOW(), '[B]学生选课页面'),
-(2002, '我的课表', 2000, 2, 'student/timetable', 'edu/student/timetable/index', '', 'StudentTimetable', 1, 0, 'C', '0', '0', 'edu:student:timetable', 'timetable', 'b_admin', NOW(), '[B]学生课表查询'),
-(2003, '成绩查询', 2000, 3, 'student/grades', 'edu/student/grades/index', '', 'StudentGrades', 1, 0, 'C', '0', '0', 'edu:student:grades', 'score', 'b_admin', NOW(), '[B]学生成绩查询'),
-(2004, '学分统计', 2000, 4, 'student/credits', 'edu/student/credits/index', '', 'StudentCredits', 1, 0, 'C', '0', '0', 'edu:statistics:credits', 'chart', 'b_admin', NOW(), '[B]学生学分统计');
+(2001, '可选课程', 0, 1, 'student/course', 'edu/student/course/index', '', 'StudentCourse', 1, 0, 'C', '0', '0', 'edu:student:course', 'course', 'b_admin', NOW(), '[B]学生选课页面'),
+(2002, '我的课表', 0, 2, 'student/timetable', 'edu/student/timetable/index', '', 'StudentTimetable', 1, 0, 'C', '0', '0', 'edu:student:timetable', 'timetable', 'b_admin', NOW(), '[B]学生课表查询'),
+(2003, '成绩查询', 0, 3, 'student/grades', 'edu/student/grades/index', '', 'StudentGrades', 1, 0, 'C', '0', '0', 'edu:student:grades', 'score', 'b_admin', NOW(), '[B]学生成绩查询'),
+(2004, '学分统计', 0, 4, 'student/credits', 'edu/student/credits/index', '', 'StudentCredits', 1, 0, 'C', '0', '0', 'edu:statistics:credits', 'chart', 'b_admin', NOW(), '[B]学生学分统计');
 
 -- 二级菜单：教师模块（B负责的数据统一加b_前缀标识）
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark) 
 VALUES 
-(2005, '我的班级', 2000, 5, 'teacher/classes', 'edu/teacher/classes/index', '', 'TeacherClasses', 1, 0, 'C', '0', '0', 'edu:teacher:classes', 'class', 'b_admin', NOW(), '[B]教师查看所教班级'),
-(2006, '成绩管理', 2000, 6, 'teacher/grades', 'edu/teacher/grades/index', '', 'TeacherGrades', 1, 0, 'C', '0', '0', 'edu:teacher:grades', 'edit', 'b_admin', NOW(), '[B]教师成绩录入和发布');
+(2005, '我的班级', 0, 5, 'teacher/classes', 'edu/teacher/classes/index', '', 'TeacherClasses', 1, 0, 'C', '0', '0', 'edu:teacher:classes', 'class', 'b_admin', NOW(), '[B]教师查看所教班级'),
+(2006, '成绩管理', 0, 6, 'teacher/grades', 'edu/teacher/grades/index', '', 'TeacherGrades', 1, 0, 'C', '0', '0', 'edu:teacher:grades', 'edit', 'b_admin', NOW(), '[B]教师成绩录入和发布');
 
 -- 学生功能按钮权限（B负责的数据统一加b_前缀标识）
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark) 
@@ -135,8 +132,6 @@ DELETE FROM sys_role_menu WHERE role_id = 3 OR role_id = 4;
 -- 学生角色菜单权限（只能看到学生模块）
 INSERT INTO sys_role_menu (role_id, menu_id) 
 VALUES 
--- 一级菜单
-(3, 2000),
 -- 学生二级菜单
 (3, 2001), (3, 2002), (3, 2003), (3, 2004),
 -- 学生按钮权限
@@ -145,8 +140,6 @@ VALUES
 -- 教师角色菜单权限（只能看到教师模块）
 INSERT INTO sys_role_menu (role_id, menu_id) 
 VALUES 
--- 一级菜单
-(4, 2000),
 -- 教师二级菜单
 (4, 2005), (4, 2006),
 -- 教师按钮权限
