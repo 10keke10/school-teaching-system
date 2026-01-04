@@ -11,44 +11,49 @@ import java.util.Map;
  * 选课业务服务接口
  */
 public interface IEnrollmentService {
-    
+
     /**
      * 学生选课
+     * 
      * @param studentId 学生ID
-     * @param classId 教学班ID
+     * @param classId   教学班ID
      * @return 操作结果
      */
     AjaxResult enrollCourse(Long studentId, Long classId);
-    
+
     /**
      * 学生退课
+     * 
      * @param enrollmentId 选课记录ID
      * @return 操作结果
      */
     AjaxResult dropCourse(Long enrollmentId);
-    
+
     /**
      * 检查学分上限
+     * 
      * @param studentId 学生ID
-     * @param termId 学期ID
+     * @param termId    学期ID
      * @return 是否超过上限
      */
     boolean checkCreditLimit(Long studentId, String termId);
-    
+
     /**
      * 检查时间冲突
+     * 
      * @param studentId 学生ID
-     * @param classId 教学班ID
+     * @param classId   教学班ID
      * @return 是否存在冲突
      */
     boolean checkTimeConflict(Long studentId, Long classId);
 
     /**
-    * 获取学生学分统计信息（调用A的存储过程）
-    * @param studentId 学生ID
-    * @param termId 学期ID
-    * @return 学分统计信息
-    */
+     * 获取学生学分统计信息（调用A的存储过程）
+     * 
+     * @param studentId 学生ID
+     * @param termId    学期ID
+     * @return 学分统计信息
+     */
     Map<String, Object> getStudentCreditInfo(Long studentId, String termId);
 
     /**

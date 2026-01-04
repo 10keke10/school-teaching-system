@@ -38,6 +38,21 @@
         limit 1
     </select>
 
+    <!-- 检查同一学期是否已选相同课程号（按course_code判断；包含成绩已发布等非退课状态） -->
+    <select id="existsSameCourseInTerm" resultType="boolean">
+        select count(*) > 0
+        from enrollment e
+                 inner join course_class cc_existing on cc_existing.class_id = e.class_id
+                 inner join course c_existing on c_existing.course_id = cc_existing.course_id
+                 inner join course_class cc_new on cc_new.class_id = #{classId}
+                 inner join course c_new on c_new.course_id = cc_new.course_id
+        where e.student_id = #{studentId}
+          and (e.status is null or e.status != 'DROPPED')
+          and e.term_id = cc_new.term_id
+          and c_existing.course_code = c_new.course_code
+        limit 1
+    </select>
+
     <select id="selectByStudentAndClass" resultMap="EnrollmentResult">
         <include refid="selectEnrollmentVo"/>
         where student_id = #{studentId} and class_id = #{classId}

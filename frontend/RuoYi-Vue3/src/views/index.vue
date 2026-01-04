@@ -1,6 +1,10 @@
 <template>
   <div class="app-container home">
-    <el-row :gutter="20">
+    <div class="welcome-container" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 100px);flex-direction:column;text-align:center;">
+      <div class="title-cn" style="color:#0a3d62;font-weight:700;font-size:68px;line-height:1.3;">欢迎进入选课系统！</div>
+      <div class="title-en" style="color:#0a3d62;font-weight:600;font-size:55px;line-height:1.3;margin-top:12px;">Welcome！</div>
+    </div>
+    <el-row :gutter="20" style="display:none">
       <el-col :sm="24" :lg="12" style="padding-left: 20px">
         <h2>若依后台管理框架</h2>
         <p>
@@ -63,8 +67,8 @@
         </el-row>
       </el-col>
     </el-row>
-    <el-divider />
-    <el-row :gutter="20">
+    <el-divider style="display:none" />
+    <el-row :gutter="20" style="display:none">
       <el-col :xs="24" :sm="24" :md="12" :lg="8">
         <el-card class="update-log">
           <template v-slot:header>
