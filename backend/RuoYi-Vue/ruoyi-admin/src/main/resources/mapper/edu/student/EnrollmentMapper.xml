@@ -53,6 +53,17 @@
         limit 1
     </select>
 
+    <!-- 统计某学生在指定学期的已选课程总学分（不依赖存储过程的回退方案） -->
+    <select id="sumCreditsByStudentAndTerm" resultType="int">
+        select COALESCE(SUM(c.credit_hours), 0)
+        from enrollment e
+                 inner join course_class cc on cc.class_id = e.class_id
+                 inner join course c on c.course_id = cc.course_id
+        where e.student_id = #{studentId}
+          and e.status = 'ENROLLED'
+          and e.term_id = #{termId}
+    </select>
+
     <select id="selectByStudentAndClass" resultMap="EnrollmentResult">
         <include refid="selectEnrollmentVo"/>
         where student_id = #{studentId} and class_id = #{classId}
@@ -156,19 +167,22 @@
             e.enrollment_id,
             e.student_id,
             e.class_id,
-            e.term_id,
             e.status,
             e.grade,
             e.grade_status,
             e.enroll_time,
             e.drop_time,
+            t.term_name as termName,
             c.course_name,
+            c.course_type,
             c.course_code,
             c.credit_hours
         from enrollment e
             left join course_class cc on cc.class_id = e.class_id
             left join course c on c.course_id = cc.course_id
+            left join term t on t.term_id = e.term_id
         where e.student_id = #{studentId}
+          and e.status = 'ENROLLED'
         <if test="termId != null and termId != ''">
             and e.term_id = #{termId}
         </if>

@@ -22,6 +22,12 @@ public interface ClassTimeSlotMapper {
     List<ClassTimeSlot> selectByStudentId(@Param("studentId") Long studentId);
 
     /**
+     * 查询学生在指定学期的已选课程时间槽
+     */
+    List<ClassTimeSlot> selectByStudentIdAndTerm(@Param("studentId") Long studentId,
+            @Param("termId") String termId);
+
+    /**
      * 查询学生课表视图（含课程名称、地点等）
      */
     List<Map<String, Object>> selectTimetableByStudent(@Param("studentId") Long studentId);

@@ -23,12 +23,14 @@
         select * from course_class where class_id = #{classId}
     </select>
 
-    <select id="selectAvailableCourses" resultType="map">
+    <select id="selectAvailableCoursesPaged" resultType="map">
         select
             cc.class_id,
             cc.course_id,
             cc.teacher_id,
             cc.term_id,
+            t.term_name,
+            u.nick_name as teacher_name,
             cc.class_time,
             cc.location,
             cc.capacity,
@@ -43,6 +45,8 @@
             e.grade
         from course_class cc
             left join course c on cc.course_id = c.course_id
+            left join term t on cc.term_id = t.term_id
+            left join sys_user u on u.user_id = cc.teacher_id
             left join enrollment e on e.class_id = cc.class_id
                  and e.student_id = #{studentId}
                  and e.status = 'ENROLLED'
@@ -50,7 +54,24 @@
         <if test="termId != null and termId != ''">
             and cc.term_id = #{termId}
         </if>
+        <if test="courseName != null and courseName != ''">
+            and c.course_name like concat('%', #{courseName}, '%')
+        </if>
         order by cc.class_id asc
+        limit #{offset}, #{pageSize}
+    </select>
+
+    <select id="selectAvailableCoursesCount" resultType="int">
+        select count(1)
+        from course_class cc
+            left join course c on cc.course_id = c.course_id
+        where cc.status = 1
+        <if test="termId != null and termId != ''">
+            and cc.term_id = #{termId}
+        </if>
+        <if test="courseName != null and courseName != ''">
+            and c.course_name like concat('%', #{courseName}, '%')
+        </if>
     </select>
 
     <select id="selectCourseInfo" resultType="map">
@@ -84,6 +105,33 @@
         set selected_count = case when selected_count &gt; 0 then selected_count - 1 else 0 end
         where class_id = #{classId}
     </update>
+
+    <select id="selectEnrolledClassTimesByStudentAndTerm" resultType="map">
+        select
+            cc.class_id,
+            cc.class_time
+        from course_class cc
+            inner join enrollment e on e.class_id = cc.class_id
+        where e.student_id = #{studentId}
+          and e.status = 'ENROLLED'
+          and cc.term_id = #{termId}
+    </select>
+
+    <select id="selectEnrolledClassScheduleByStudentAndTerm" resultType="map">
+        select
+            cc.class_id,
+            cc.class_time,
+            cc.location,
+            c.course_name,
+            u.nick_name as teacher_name
+        from course_class cc
+            inner join enrollment e on e.class_id = cc.class_id
+            left join course c on c.course_id = cc.course_id
+            left join sys_user u on u.user_id = cc.teacher_id
+        where e.student_id = #{studentId}
+          and e.status = 'ENROLLED'
+          and cc.term_id = #{termId}
+    </select>
 
     <select id="selectClassesByTeacherId" resultType="map">
         select

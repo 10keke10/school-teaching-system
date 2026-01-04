@@ -3,8 +3,13 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>成绩管理</span>
-          <div>
+          <div class="header-left">
+            <span>成绩管理</span>
+          </div>
+          <div class="header-center">
+            <span v-if="isPublished && displayAverage !== null">班级平均成绩：{{ displayAverage }}</span>
+          </div>
+          <div class="header-right">
             <el-select v-model="currentClassId" placeholder="选择班级" @change="loadGrades" style="width: 300px" clearable>
               <el-option
                 v-for="cls in classOptions"
@@ -17,10 +22,10 @@
         </div>
       </template>
       <el-table :data="gradeList" stripe v-loading="loading">
-        <el-table-column prop="enrollmentId" label="选课ID" width="100" />
-        <el-table-column prop="studentId" label="学号" width="120" />
-        <el-table-column prop="studentName" label="学生姓名" width="150" />
-        <el-table-column prop="grade" label="成绩" width="180">
+        <el-table-column prop="enrollmentId" label="选课ID" align="center" min-width="120" />
+        <el-table-column prop="studentId" label="学号" align="center" min-width="160" />
+        <el-table-column prop="studentName" label="学生姓名" align="center" min-width="180" />
+        <el-table-column prop="grade" label="成绩" align="center" min-width="220">
           <template #default="scope">
             <el-input-number 
               v-model="scope.row.grade" 
@@ -32,7 +37,7 @@
             />
           </template>
         </el-table-column>
-        <el-table-column prop="gradeStatus" label="状态" width="120">
+        <el-table-column prop="gradeStatus" label="状态" align="center" min-width="140">
           <template #default="scope">
             <el-tag :type="scope.row.gradeStatus === 'PUBLISHED' ? 'success' : 'info'">
               {{ scope.row.gradeStatus === 'PUBLISHED' ? '已发布' : '草稿' }}
@@ -41,7 +46,6 @@
         </el-table-column>
       </el-table>
       <div class="actions" style="margin-top: 12px; text-align: right;">
-        <el-button type="primary" @click="handleSave" :disabled="!currentClassId">保存成绩</el-button>
         <el-button type="success" @click="handlePublish" :disabled="!currentClassId">发布成绩</el-button>
       </div>
     </el-card>
@@ -49,7 +53,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getMyClasses, getClassStudents, batchUpdateGrades, publishGrades } from '@/api/edu/teacher'
 
@@ -57,6 +61,15 @@ const loading = ref(false)
 const gradeList = ref([])
 const currentClassId = ref(null)
 const classOptions = ref([])
+const isPublished = computed(() => gradeList.value.length > 0 && gradeList.value.every(item => item.gradeStatus === 'PUBLISHED'))
+const computedAverage = computed(() => {
+  if (!isPublished.value) return null
+  const grades = gradeList.value.map(g => Number(g.grade)).filter(v => !isNaN(v))
+  if (grades.length === 0) return null
+  const sum = grades.reduce((a, b) => a + b, 0)
+  return Number((sum / grades.length).toFixed(2))
+})
+const displayAverage = computed(() => computedAverage.value)
 
 async function loadClasses() {
   try {
@@ -90,8 +103,8 @@ async function loadGrades() {
       studentId: item.studentId || item.student_id,
       studentName: item.studentName || `学生${item.studentId || item.student_id}`,
       grade: item.grade,
-      gradeStatus: item.gradeStatus || item.grade_status || 'DRAFT'
-    }))
+    gradeStatus: item.gradeStatus || item.grade_status || 'DRAFT'
+  }))
   } catch (e) {
     ElMessage.error('获取学生成绩失败')
     gradeList.value = []
@@ -153,5 +166,16 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.header-left {
+  flex: 0 0 auto;
+}
+.header-center {
+  flex: 1 1 auto;
+  text-align: center;
+  font-weight: 500;
+}
+.header-right {
+  flex: 0 0 auto;
 }
 </style>

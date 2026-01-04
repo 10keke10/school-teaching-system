@@ -9,8 +9,7 @@ import com.ruoyi.edu.domain.Term;
  * @author A
  * @date 2024-01-15
  */
-public interface TermMapper 
-{
+public interface TermMapper {
     /**
      * 查询学期
      * 
@@ -58,4 +57,14 @@ public interface TermMapper
      * @return 结果
      */
     public int deleteTermByTermIds(String[] termIds);
+
+    /**
+     * 将所有学期设置为非当前
+     */
+    public int resetAllActive();
+
+    /**
+     * 查询当前开放选课的学期
+     */
+    public com.ruoyi.edu.domain.Term selectActiveTerm();
 }

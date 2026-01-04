@@ -4,6 +4,7 @@ import java.util.List;
 import com.ruoyi.common.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.edu.admin.mapper.TermMapper;
 import com.ruoyi.edu.domain.Term;
 import com.ruoyi.edu.admin.service.ITermService;
@@ -51,8 +52,12 @@ public class TermServiceImpl implements ITermService
      * @return 结果
      */
     @Override
+    @Transactional
     public int insertTerm(Term term)
     {
+        if (term.getIsActive() != null && term.getIsActive() == 1) {
+            termMapper.resetAllActive();
+        }
         term.setCreateTime(DateUtils.getNowDate());
         return termMapper.insertTerm(term);
     }
@@ -64,8 +69,12 @@ public class TermServiceImpl implements ITermService
      * @return 结果
      */
     @Override
+    @Transactional
     public int updateTerm(Term term)
     {
+        if (term.getIsActive() != null && term.getIsActive() == 1) {
+            termMapper.resetAllActive();
+        }
         term.setUpdateTime(DateUtils.getNowDate());
         return termMapper.updateTerm(term);
     }

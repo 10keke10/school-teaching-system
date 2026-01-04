@@ -112,6 +112,11 @@ pagehelper:
   supportMethodsArguments: true
   params: count=countSql
 
+# MyBatis-Plus配置
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*Mapper.xml
+  type-aliases-package: com.ruoyi.**.domain
+
 # Swagger配置
 swagger:
   # 是否开启swagger

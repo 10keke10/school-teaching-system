@@ -43,10 +43,6 @@ public class EduTermController extends BaseController
     public TableDataInfo list(Term term)
     {
         startPage();
-        // A只查询自己插入的数据（前缀a_）
-        if (term.getTermId() == null || !term.getTermId().startsWith("a_")) {
-             term.setTermId("a_"); // 简单模糊匹配，实际Mapper用了like '%a_%'
-        }
         List<Term> list = termService.selectTermList(term);
         return getDataTable(list);
     }
@@ -58,9 +54,7 @@ public class EduTermController extends BaseController
     @PreAuthorize("@ss.hasPermi('edu:admin:term:list')")
     @GetMapping("/terms")
     public AjaxResult getTerms() {
-        // A只查询自己插入的数据（前缀a_）
         Term term = new Term();
-        term.setTermId("a_");  // 模糊查询
         List<Term> list = termService.selectTermList(term);
         return AjaxResult.success(list);
     }
@@ -73,7 +67,6 @@ public class EduTermController extends BaseController
     @PostMapping("/term/export")
     public void export(HttpServletResponse response, Term term)
     {
-        term.setTermId("a_");
         List<Term> list = termService.selectTermList(term);
         ExcelUtil<Term> util = new ExcelUtil<Term>(Term.class);
         util.exportExcel(response, list, "学期数据");
@@ -97,10 +90,6 @@ public class EduTermController extends BaseController
     @PostMapping("/term")
     public AjaxResult add(@Validated @RequestBody Term term)
     {
-        // 自动添加a_前缀
-        if (!term.getTermId().startsWith("a_")) {
-            term.setTermId("a_" + term.getTermId());
-        }
         return toAjax(termService.insertTerm(term));
     }
 

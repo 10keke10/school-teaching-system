@@ -51,3 +51,11 @@ export function getStudentCredits(studentId, termId) {
     params: { term_id: termId }
   })
 }
+
+// 学期列表（学生端）
+export function getStudentTerms() {
+  return request({
+    url: '/edu/student/terms',
+    method: 'get'
+  })
+}

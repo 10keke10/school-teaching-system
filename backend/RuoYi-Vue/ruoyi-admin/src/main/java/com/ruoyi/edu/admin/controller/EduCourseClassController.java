@@ -42,11 +42,6 @@ public class EduCourseClassController extends BaseController
     public TableDataInfo list(CourseClass courseClass)
     {
         startPage();
-        // 核心逻辑：强制隔离，如果没有指定termId，则默认查询所有 "a_" 开头的学期
-        // 如果前端传递了 specific termId (e.g. "a_202401")，则使用前端传递的
-        if (courseClass.getTermId() == null || courseClass.getTermId().trim().isEmpty()) {
-            courseClass.setTermId("a_%");
-        }
         List<CourseClass> list = courseClassService.selectCourseClassList(courseClass);
         return getDataTable(list);
     }
@@ -59,9 +54,6 @@ public class EduCourseClassController extends BaseController
     @PostMapping("/courseClass/export")
     public void export(HttpServletResponse response, CourseClass courseClass)
     {
-        if (courseClass.getTermId() == null || courseClass.getTermId().trim().isEmpty()) {
-            courseClass.setTermId("a_%");
-        }
         List<CourseClass> list = courseClassService.selectCourseClassList(courseClass);
         ExcelUtil<CourseClass> util = new ExcelUtil<CourseClass>(CourseClass.class);
         util.exportExcel(response, list, "教学班数据");

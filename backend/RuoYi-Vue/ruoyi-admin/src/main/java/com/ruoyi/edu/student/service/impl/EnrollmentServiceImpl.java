@@ -8,6 +8,8 @@ import com.ruoyi.edu.student.mapper.ClassTimeSlotMapper;
 import com.ruoyi.edu.student.mapper.CourseClassMapper;
 import com.ruoyi.edu.student.mapper.EnrollmentMapper;
 import com.ruoyi.edu.student.service.IEnrollmentService;
+import com.ruoyi.edu.admin.mapper.TermMapper;
+import com.ruoyi.edu.domain.Term;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,12 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
 
     @Autowired
     private ClassTimeSlotMapper classTimeSlotMapper;
+
+    @Autowired
+    private TermMapper termMapper;
+
+    @Autowired
+    private com.ruoyi.edu.admin.mapper.CreditRuleMapper creditRuleMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -73,7 +81,6 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
                 existed.setUpdateTime(new Date());
                 int updated = enrollmentMapper.updateEnrollment(existed);
                 if (updated > 0) {
-                    courseClassMapper.increaseSelectedCount(classId);
                     return AjaxResult.success("选课成功");
                 }
                 return AjaxResult.error("选课失败");
@@ -110,7 +117,6 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
         try {
             int rows = enrollmentMapper.insertEnrollment(enrollment);
             if (rows > 0) {
-                courseClassMapper.increaseSelectedCount(classId);
                 return AjaxResult.success("选课成功");
             }
             return AjaxResult.error("选课失败");
@@ -156,7 +162,6 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
 
         int rows = enrollmentMapper.updateEnrollment(enrollment);
         if (rows > 0) {
-            courseClassMapper.decreaseSelectedCount(enrollment.getClassId());
             return AjaxResult.success("退课成功");
         }
         return AjaxResult.error("退课失败");
@@ -168,40 +173,122 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
     }
 
     private boolean checkCreditLimit(Long studentId, String termId, int newCourseCredits) {
-        Map<String, Object> params = new HashMap<>();
-        params.put("p_student_id", studentId);
-        params.put("p_term_id", termId);
-        params.put("p_total_credits", null);
-        int maxCredits = 20;
+        int maxCredits = resolveMaxCredits(termId);
+        // 首选：调用存储过程
         try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("p_student_id", studentId);
+            params.put("p_term_id", termId);
+            params.put("p_total_credits", null);
             enrollmentMapper.callCalcStudentCredits(params);
             Integer totalCredits = (Integer) params.get("p_total_credits");
             int credits = totalCredits != null ? totalCredits : 0;
             return credits + newCourseCredits <= maxCredits;
-        } catch (Exception e) {
-            // 降级为允许（避免存储过程异常导致阻塞）
-            return true;
+        } catch (Exception ignore) {
+            // 回退：直接统计该学期已选课程的学分和
+            try {
+                Integer sum = enrollmentMapper.sumCreditsByStudentAndTerm(studentId, termId);
+                int credits = sum != null ? sum : 0;
+                return credits + newCourseCredits <= maxCredits;
+            } catch (Exception e2) {
+                // 最后回退：保守拒绝（确保不突破上限）
+                return newCourseCredits <= maxCredits;
+            }
         }
     }
 
     @Override
     public boolean checkTimeConflict(Long studentId, Long classId) {
         List<ClassTimeSlot> newSlots = classTimeSlotMapper.selectByClassId(classId);
-        if (newSlots == null || newSlots.isEmpty()) {
+        CourseClass cc = courseClassMapper.selectCourseClassById(classId);
+        String termId = cc != null ? cc.getTermId() : null;
+        List<ClassTimeSlot> currentSlots = termId != null
+                ? classTimeSlotMapper.selectByStudentIdAndTerm(studentId, termId)
+                : classTimeSlotMapper.selectByStudentId(studentId);
+        // 首选：使用class_time_slot表的结构化数据进行检测
+        if (newSlots != null && !newSlots.isEmpty() && currentSlots != null && !currentSlots.isEmpty()) {
+            for (ClassTimeSlot newSlot : newSlots) {
+                for (ClassTimeSlot existing : currentSlots) {
+                    if (newSlot.isTimeConflict(existing)) {
+                        return true;
+                    }
+                }
+            }
             return false;
         }
-        List<ClassTimeSlot> currentSlots = classTimeSlotMapper.selectByStudentId(studentId);
-        if (currentSlots == null || currentSlots.isEmpty()) {
+        // 兜底：若缺少结构化时间槽数据，则解析course_class.class_time文本进行检测
+        List<ClassTimeSlot> parsedNewSlots = parseClassTimeString(cc != null ? cc.getClassTime() : null);
+        if (parsedNewSlots == null || parsedNewSlots.isEmpty()) {
             return false;
         }
-        for (ClassTimeSlot newSlot : newSlots) {
-            for (ClassTimeSlot existing : currentSlots) {
-                if (newSlot.isTimeConflict(existing)) {
+        List<Map<String, Object>> enrolledTimes = (termId != null)
+                ? courseClassMapper.selectEnrolledClassTimesByStudentAndTerm(studentId, termId)
+                : new java.util.ArrayList<>();
+        List<ClassTimeSlot> parsedCurrentSlots = new java.util.ArrayList<>();
+        if (enrolledTimes != null) {
+            for (Map<String, Object> row : enrolledTimes) {
+                String ct = row.get("class_time") != null ? row.get("class_time").toString() : null;
+                parsedCurrentSlots.addAll(parseClassTimeString(ct));
+            }
+        }
+        if (parsedCurrentSlots.isEmpty()) {
+            return false;
+        }
+        for (ClassTimeSlot n : parsedNewSlots) {
+            for (ClassTimeSlot e : parsedCurrentSlots) {
+                if (n.isTimeConflict(e)) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private List<ClassTimeSlot> parseClassTimeString(String classTime) {
+        List<ClassTimeSlot> slots = new java.util.ArrayList<>();
+        if (classTime == null || classTime.trim().isEmpty()) {
+            return slots;
+        }
+        String[] parts = classTime.split("[,，;；\\s]+");
+        for (String part : parts) {
+            part = part.trim();
+            if (part.isEmpty())
+                continue;
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile("周([一二三四五六日])\\s*第?(\\d+)\\s*-\\s*(\\d+)节");
+            java.util.regex.Matcher m = p.matcher(part);
+            if (m.find()) {
+                int weekDay = mapWeekDay(m.group(1));
+                int start = Integer.parseInt(m.group(2));
+                int end = Integer.parseInt(m.group(3));
+                ClassTimeSlot slot = new ClassTimeSlot();
+                slot.setWeekDay(weekDay);
+                slot.setStartSlot(start);
+                slot.setEndSlot(end);
+                slots.add(slot);
+            }
+        }
+        return slots;
+    }
+
+    private int mapWeekDay(String cn) {
+        switch (cn) {
+            case "一":
+                return 1;
+            case "二":
+                return 2;
+            case "三":
+                return 3;
+            case "四":
+                return 4;
+            case "五":
+                return 5;
+            case "六":
+                return 6;
+            case "日":
+                return 7;
+            default:
+                return 0;
+        }
     }
 
     @Override
@@ -216,7 +303,7 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
             enrollmentMapper.callCalcStudentCredits(params);
             Integer totalCredits = (Integer) params.get("p_total_credits");
             int credits = totalCredits != null ? totalCredits : 0;
-            int maxCredits = 20;
+            int maxCredits = resolveMaxCredits(termId);
 
             result.put("studentId", studentId);
             result.put("termId", termId);
@@ -236,21 +323,100 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
         return result;
     }
 
+    private int resolveMaxCredits(String termId) {
+        int maxCredits = 20;
+        try {
+            com.ruoyi.edu.domain.CreditRule ruleQuery = new com.ruoyi.edu.domain.CreditRule();
+            ruleQuery.setTermId(termId);
+            ruleQuery.setIsActive(1);
+            java.util.List<com.ruoyi.edu.domain.CreditRule> rules = creditRuleMapper.selectCreditRuleList(ruleQuery);
+            if (rules != null && !rules.isEmpty() && rules.get(0).getMaxCredits() != null) {
+                return rules.get(0).getMaxCredits();
+            }
+            com.ruoyi.edu.domain.CreditRule activeQuery = new com.ruoyi.edu.domain.CreditRule();
+            activeQuery.setIsActive(1);
+            java.util.List<com.ruoyi.edu.domain.CreditRule> actives = creditRuleMapper
+                    .selectCreditRuleList(activeQuery);
+            if (actives != null && !actives.isEmpty() && actives.get(0).getMaxCredits() != null) {
+                return actives.get(0).getMaxCredits();
+            }
+        } catch (Exception ignore) {
+        }
+        return maxCredits;
+    }
+
     @Override
-    public Map<String, Object> listAvailableCourses(Long studentId, String termId) {
-        List<Map<String, Object>> courses = courseClassMapper.selectAvailableCourses(studentId, termId);
+    public Map<String, Object> listAvailableCourses(Long studentId, String termId, String courseName, Integer pageNum,
+            Integer pageSize) {
+        Term active = termMapper.selectActiveTerm();
+        String activeTermId = active != null ? active.getTermId() : null;
+        int pn = (pageNum != null && pageNum > 0) ? pageNum : 1;
+        int ps = (pageSize != null && pageSize > 0) ? pageSize : 10;
+        int offset = (pn - 1) * ps;
+        Integer total = courseClassMapper.selectAvailableCoursesCount(studentId, activeTermId, courseName);
+        List<Map<String, Object>> courses = courseClassMapper.selectAvailableCoursesPaged(studentId, activeTermId,
+                courseName, offset, ps);
         Map<String, Object> result = new HashMap<>();
         result.put("rows", courses);
-        result.put("total", courses != null ? courses.size() : 0);
+        result.put("total", total != null ? total : (courses != null ? courses.size() : 0));
+        if (active != null) {
+            result.put("termId", active.getTermId());
+            result.put("termName", active.getTermName());
+        } else {
+            result.put("termId", null);
+            result.put("termName", null);
+        }
         return result;
     }
 
     @Override
     public Map<String, Object> getStudentTimetable(Long studentId) {
         Map<String, Object> result = new HashMap<>();
+        Term active = termMapper.selectActiveTerm();
         List<Map<String, Object>> slots = classTimeSlotMapper.selectTimetableByStudent(studentId);
+        if (slots == null || slots.isEmpty()) {
+            if (active != null) {
+                List<Map<String, Object>> schedules = courseClassMapper
+                        .selectEnrolledClassScheduleByStudentAndTerm(studentId, active.getTermId());
+                List<Map<String, Object>> parsed = new java.util.ArrayList<>();
+                if (schedules != null) {
+                    long sid = 1L;
+                    for (Map<String, Object> row : schedules) {
+                        String ct = row.get("class_time") != null ? row.get("class_time").toString() : null;
+                        Long classId = row.get("class_id") != null ? Long.valueOf(row.get("class_id").toString())
+                                : null;
+                        String courseName = row.get("course_name") != null ? row.get("course_name").toString() : null;
+                        String location = row.get("location") != null ? row.get("location").toString() : null;
+                        String teacherName = row.get("teacher_name") != null ? row.get("teacher_name").toString()
+                                : null;
+                        List<ClassTimeSlot> parts = parseClassTimeString(ct);
+                        for (ClassTimeSlot s : parts) {
+                            Map<String, Object> m = new HashMap<>();
+                            m.put("slot_id", sid++);
+                            m.put("class_id", classId);
+                            m.put("week_day", s.getWeekDay());
+                            m.put("start_slot", s.getStartSlot());
+                            m.put("end_slot", s.getEndSlot());
+                            m.put("class_time", ct);
+                            m.put("location", location);
+                            m.put("course_name", courseName);
+                            m.put("teacher_name", teacherName);
+                            parsed.add(m);
+                        }
+                    }
+                }
+                slots = parsed;
+            }
+        }
         result.put("studentId", studentId);
         result.put("slots", slots);
+        if (active != null) {
+            result.put("termId", active.getTermId());
+            result.put("termName", active.getTermName());
+        } else {
+            result.put("termId", null);
+            result.put("termName", null);
+        }
         return result;
     }
 

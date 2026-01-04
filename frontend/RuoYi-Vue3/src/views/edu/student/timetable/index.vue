@@ -4,13 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>我的课表</span>
-          <el-select v-model="currentWeek" placeholder="选择周次" style="width: 120px">
-            <el-option label="第1周" value="1" />
-            <el-option label="第2周" value="2" />
-            <el-option label="第3周" value="3" />
-            <el-option label="第4周" value="4" />
-            <el-option label="第5周" value="5" />
-          </el-select>
+          <el-tag type="info">{{ currentTermName || '未设置当前学期' }}</el-tag>
         </div>
       </template>
 
@@ -21,9 +15,9 @@
           </template>
         </el-table-column>
         <el-table-column
-          v-for="day in 5"
+          v-for="day in 7"
           :key="day"
-          :label="'周' + ['一', '二', '三', '四', '五'][day - 1]"
+          :label="'周' + ['一', '二', '三', '四', '五', '六', '日'][day - 1]"
           align="center"
         >
           <template #default="{ row }">
@@ -34,6 +28,7 @@
             >
               <div class="course-name">{{ row.courses[day].courseName }}</div>
               <div class="course-time">{{ row.courses[day].time }}</div>
+              <div class="course-teacher">{{ row.courses[day].teacherName }}</div>
               <div class="course-location">{{ row.courses[day].location }}</div>
             </div>
           </template>
@@ -63,10 +58,10 @@
 import { ref, onMounted, computed } from 'vue'
 import { getTimetable } from '@/api/edu/student/course'
 
-const currentWeek = ref('1')
 const useMock = ref(false)
 const slots = ref([])
 const courseList = ref([])
+const currentTermName = ref('')
 
 function getCourseColor(courseId) {
   const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399']
@@ -83,12 +78,14 @@ const timetableData = computed(() => {
         const courseName = slot.course_name || slot.courseName
         const time = `${slot.start_slot}-${slot.end_slot}节`
         const location = slot.location
+        const teacherName = slot.teacher_name || slot.teacherName
         const weekDay = slot.week_day
         row.courses[weekDay] = {
           courseId,
           courseName,
           time,
-          location
+          location,
+          teacherName
         }
       }
     })
@@ -102,7 +99,7 @@ async function loadTimetable() {
     const res = await getTimetable()
     const data = res.data || res
     slots.value = data.slots || []
-    // 收集课程列表用于图例
+    currentTermName.value = data.termName || ''
     const map = {}
     slots.value.forEach(s => {
       const key = s.class_id || s.classId
@@ -112,11 +109,13 @@ async function loadTimetable() {
   } catch (e) {
     slots.value = []
     courseList.value = []
+    currentTermName.value = ''
   }
 }
 
 onMounted(() => {
   loadTimetable()
+  window.addEventListener('edu_enrollment_changed', loadTimetable)
 })
 </script>
 

@@ -119,22 +119,16 @@
 
         <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
           <el-row :gutter="20">
-            <el-col :span="8">
+            <el-col :span="12">
               <div class="summary-item">
                 <div class="summary-label">必修课学分</div>
                 <div class="summary-value">{{ requiredCredits }}</div>
               </div>
             </el-col>
-            <el-col :span="8">
+            <el-col :span="12">
               <div class="summary-item">
                 <div class="summary-label">选修课学分</div>
                 <div class="summary-value">{{ electiveCredits }}</div>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="summary-item">
-                <div class="summary-label">平均分</div>
-                <div class="summary-value">{{ averageGrade.toFixed(1) }}</div>
               </div>
             </el-col>
           </el-row>
@@ -153,19 +147,16 @@
 </template>
 
 <script setup name="StudentCredits">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getStudentCredits } from '@/api/edu/student/course'
+import { getStudentCredits, getStudentGrades, getStudentTerms } from '@/api/edu/student/course'
 import useUserStore from '@/store/modules/user'
 
 const loading = ref(false)
 const useMock = ref(false)
-const currentTerm = ref('2024-2025-1')
+const currentTerm = ref('')
 
-const termOptions = ref([
-  { termId: '2024-2025-1', termName: '2024-2025秋季学期' },
-  { termId: '2024-2025-2', termName: '2024-2025冬季学期' }
-])
+const termOptions = ref([])
 
 const creditInfo = reactive({
   studentId: null,
@@ -174,44 +165,7 @@ const creditInfo = reactive({
   maxCredits: 20
 })
 
-const courseList = ref([
-  {
-    courseId: 1,
-    courseCode: 'CS101',
-    courseName: '计算机基础',
-    courseType: '必修',
-    creditHours: 3,
-    status: 'ENROLLED',
-    grade: 85.5
-  },
-  {
-    courseId: 2,
-    courseCode: 'MATH201',
-    courseName: '高等数学',
-    courseType: '必修',
-    creditHours: 4,
-    status: 'ENROLLED',
-    grade: 92
-  },
-  {
-    courseId: 3,
-    courseCode: 'ENG301',
-    courseName: '大学英语',
-    courseType: '选修',
-    creditHours: 2,
-    status: 'ENROLLED',
-    grade: null
-  },
-  {
-    courseId: 4,
-    courseCode: 'PHY101',
-    courseName: '大学物理',
-    courseType: '选修',
-    creditHours: 3,
-    status: 'COMPLETED',
-    grade: 78.5
-  }
-])
+const courseList = ref([])
 
 const percentage = computed(() => {
   return creditInfo.currentCredits ? (creditInfo.currentCredits / creditInfo.maxCredits) * 100 : 0
@@ -231,12 +185,7 @@ const electiveCredits = computed(() => {
     .reduce((sum, course) => sum + course.creditHours, 0)
 })
 
-const averageGrade = computed(() => {
-  const gradedCourses = courseList.value.filter(course => course.grade !== null && course.grade !== undefined)
-  if (gradedCourses.length === 0) return 0
-  const total = gradedCourses.reduce((sum, course) => sum + course.grade, 0)
-  return total / gradedCourses.length
-})
+// 平均分已移除
 
 const statusMessage = computed(() => {
   if (percentage.value >= 100) {
@@ -289,6 +238,19 @@ async function loadCreditStats() {
     creditInfo.currentCredits = data.totalCredits || data.currentCredits || 0
     creditInfo.maxCredits = data.maxCredits || 20
     creditInfo.status = data.status || (creditInfo.currentCredits >= creditInfo.maxCredits ? '已满' : '可选')
+    const gradeRes = await getStudentGrades({ termId: currentTerm.value, gradeStatus: '' })
+    const gradeData = gradeRes.data || gradeRes
+    courseList.value = (gradeData || []).map(item => ({
+      courseCode: item.course_code || item.courseCode,
+      courseName: item.course_name || item.courseName,
+      courseType: item.course_type || item.courseType || '必修',
+      creditHours: item.credit_hours || item.creditHours,
+      status: item.status || 'ENROLLED',
+      grade: item.grade
+    }))
+    const enrolledCourses = courseList.value.filter(c => c.status === 'ENROLLED')
+    const sumCredits = enrolledCourses.reduce((sum, c) => sum + (Number(c.creditHours) || 0), 0)
+    creditInfo.currentCredits = sumCredits
   } catch (e) {
     useMock.value = true
     ElMessage.error('学分统计获取失败，已回退为本地数据')
@@ -311,7 +273,37 @@ function getGradeTagType(grade) {
 }
 
 onMounted(() => {
-  loadCreditStats()
+  getStudentTerms().then(res => {
+    const list = res.data || res
+    termOptions.value = (list || []).map(t => ({
+      termId: t.termId || t.term_id,
+      termName: t.termName || t.term_name,
+      isActive: t.isActive || t.is_active
+    }))
+    const active = termOptions.value.find(t => t.isActive === 1)
+    currentTerm.value = active ? active.termId : (termOptions.value[0]?.termId || '')
+    loadCreditStats()
+  }).catch(() => {
+    useMock.value = true
+    loadCreditStats()
+  })
+  const handler = () => loadCreditStats()
+  window.addEventListener('edu_enrollment_changed', handler)
+  // 保存引用以便卸载
+  window.__eduCreditsHandler = handler
+})
+
+onActivated(() => {
+  if (currentTerm.value) {
+    loadCreditStats()
+  }
+})
+
+onUnmounted(() => {
+  if (window.__eduCreditsHandler) {
+    window.removeEventListener('edu_enrollment_changed', window.__eduCreditsHandler)
+    delete window.__eduCreditsHandler
+  }
 })
 </script>
 

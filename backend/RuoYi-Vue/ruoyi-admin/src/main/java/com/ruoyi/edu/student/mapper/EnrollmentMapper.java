@@ -58,6 +58,12 @@ public interface EnrollmentMapper {
     void callCalcStudentCredits(Map<String, Object> params);
 
     /**
+     * 统计某学生在指定学期的已选课程总学分（不依赖存储过程的回退方案）
+     */
+    Integer sumCreditsByStudentAndTerm(@Param("studentId") Long studentId,
+            @Param("termId") String termId);
+
+    /**
      * 统计班级已选人数（只统计ENROLLED）
      */
     int countEnrolledByClassId(Long classId);

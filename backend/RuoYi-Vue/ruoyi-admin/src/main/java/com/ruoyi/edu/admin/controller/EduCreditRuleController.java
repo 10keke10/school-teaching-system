@@ -43,13 +43,6 @@ public class EduCreditRuleController extends BaseController
     public TableDataInfo list(CreditRule creditRule)
     {
         startPage();
-        // A只查询自己插入的数据（前缀a_）
-        if (creditRule.getTermId() != null && !creditRule.getTermId().startsWith("a_")) {
-             // 仅当用户指定了termId时才处理，否则查询所有可能包含前缀的
-             creditRule.setTermId("a_" + creditRule.getTermId());
-        } else if (creditRule.getTermId() == null) {
-            creditRule.setTermId("a_"); // 模糊匹配
-        }
         
         List<CreditRule> list = creditRuleService.selectCreditRuleList(creditRule);
         return getDataTable(list);
@@ -63,7 +56,6 @@ public class EduCreditRuleController extends BaseController
     @PostMapping("/creditRule/export")
     public void export(HttpServletResponse response, CreditRule creditRule)
     {
-        creditRule.setTermId("a_");
         List<CreditRule> list = creditRuleService.selectCreditRuleList(creditRule);
         ExcelUtil<CreditRule> util = new ExcelUtil<CreditRule>(CreditRule.class);
         util.exportExcel(response, list, "学分规则数据");
@@ -87,9 +79,6 @@ public class EduCreditRuleController extends BaseController
     @PostMapping("/creditRule")
     public AjaxResult add(@Validated @RequestBody CreditRule creditRule)
     {
-        if (creditRule.getTermId() != null && !creditRule.getTermId().startsWith("a_")) {
-            creditRule.setTermId("a_" + creditRule.getTermId());
-        }
         return toAjax(creditRuleService.insertCreditRule(creditRule));
     }
 

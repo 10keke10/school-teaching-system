@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS term_bak_20260104_2 LIKE term;
+INSERT INTO term_bak_20260104_2 SELECT * FROM term;
+CREATE TABLE IF NOT EXISTS course_bak_20260104_2 LIKE course;
+INSERT INTO course_bak_20260104_2 SELECT * FROM course;
+CREATE TABLE IF NOT EXISTS course_class_bak_20260104_2 LIKE course_class;
+INSERT INTO course_class_bak_20260104_2 SELECT * FROM course_class;
+CREATE TABLE IF NOT EXISTS enrollment_bak_20260104_2 LIKE enrollment;
+INSERT INTO enrollment_bak_20260104_2 SELECT * FROM enrollment;
+CREATE TABLE IF NOT EXISTS credit_rule_bak_20260104_2 LIKE credit_rule;
+INSERT INTO credit_rule_bak_20260104_2 SELECT * FROM credit_rule;
+CREATE TABLE IF NOT EXISTS class_time_slot_bak_20260104_2 LIKE class_time_slot;
+INSERT INTO class_time_slot_bak_20260104_2 SELECT * FROM class_time_slot;

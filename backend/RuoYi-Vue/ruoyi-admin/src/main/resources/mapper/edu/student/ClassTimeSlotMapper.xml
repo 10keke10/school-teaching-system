@@ -26,6 +26,17 @@
         order by ts.week_day, ts.start_slot
     </select>
 
+    <select id="selectByStudentIdAndTerm" resultMap="ClassTimeSlotResult">
+        select ts.*
+        from class_time_slot ts
+            inner join enrollment e on ts.class_id = e.class_id
+            inner join course_class cc on cc.class_id = ts.class_id
+        where e.student_id = #{studentId}
+          and e.status = 'ENROLLED'
+          and cc.term_id = #{termId}
+        order by ts.week_day, ts.start_slot
+    </select>
+
     <select id="selectTimetableByStudent" parameterType="Long" resultType="map">
         select
             ts.slot_id,
@@ -35,13 +46,18 @@
             ts.end_slot,
             cc.class_time,
             cc.location,
-            c.course_name
+            c.course_name,
+            u.nick_name as teacher_name,
+            t.term_name
         from class_time_slot ts
             inner join enrollment e on ts.class_id = e.class_id
             inner join course_class cc on cc.class_id = ts.class_id
             left join course c on c.course_id = cc.course_id
+            left join sys_user u on u.user_id = cc.teacher_id
+            left join term t on t.term_id = cc.term_id
         where e.student_id = #{studentId}
           and e.status = 'ENROLLED'
+          and t.is_active = 1
         order by ts.week_day, ts.start_slot
     </select>
 

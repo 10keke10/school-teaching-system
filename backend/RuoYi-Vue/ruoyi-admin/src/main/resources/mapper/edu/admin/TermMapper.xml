@@ -93,4 +93,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{termId}
         </foreach>
     </delete>
+    
+    <update id="resetAllActive">
+        update term set is_active = 0
+    </update>
+    
+    <select id="selectActiveTerm" resultMap="TermResult">
+        <include refid="selectTermVo"/>
+        where is_active = 1
+        limit 1
+    </select>
 </mapper>

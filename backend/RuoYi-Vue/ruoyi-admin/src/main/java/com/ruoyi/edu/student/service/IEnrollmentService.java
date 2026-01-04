@@ -59,7 +59,8 @@ public interface IEnrollmentService {
     /**
      * 可选课程列表（含是否已选、容量等）
      */
-    Map<String, Object> listAvailableCourses(Long studentId, String termId);
+    Map<String, Object> listAvailableCourses(Long studentId, String termId, String courseName, Integer pageNum,
+            Integer pageSize);
 
     /**
      * 学生课表数据

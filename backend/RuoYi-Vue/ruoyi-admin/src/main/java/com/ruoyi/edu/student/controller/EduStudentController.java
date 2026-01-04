@@ -10,7 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.ruoyi.edu.admin.mapper.TermMapper;
+import com.ruoyi.edu.domain.Term;
 import java.util.Map;
+import java.util.List;
 
 /**
  * 学生功能控制器（接口：/edu/student/*）
@@ -21,6 +24,9 @@ public class EduStudentController extends BaseController {
 
     @Autowired
     private IEnrollmentService enrollmentService;
+
+    @Autowired
+    private TermMapper termMapper;
 
     /**
      * POST /edu/student/enroll - 学生选课
@@ -66,9 +72,13 @@ public class EduStudentController extends BaseController {
      * 获取可选课程列表（用于前端页面）
      */
     @GetMapping("/courses")
-    public AjaxResult getAvailableCourses(@RequestParam(required = false) String termId) {
+    public AjaxResult getAvailableCourses(@RequestParam(required = false) String termId,
+            @RequestParam(required = false) String courseName,
+            @RequestParam(required = false) Integer pageNum,
+            @RequestParam(required = false) Integer pageSize) {
         Long studentId = getCurrentStudentId();
-        return AjaxResult.success(enrollmentService.listAvailableCourses(studentId, termId));
+        return AjaxResult
+                .success(enrollmentService.listAvailableCourses(studentId, termId, courseName, pageNum, pageSize));
     }
 
     /**
@@ -80,5 +90,15 @@ public class EduStudentController extends BaseController {
             @RequestParam(required = false) String gradeStatus) {
         Long studentId = getCurrentStudentId();
         return AjaxResult.success(enrollmentService.getStudentGrades(studentId, termId, gradeStatus));
+    }
+
+    /**
+     * 学期列表（供学生端选择使用）
+     */
+    @GetMapping("/terms")
+    public AjaxResult getTerms() {
+        Term query = new Term();
+        List<Term> list = termMapper.selectTermList(query);
+        return AjaxResult.success(list);
     }
 }

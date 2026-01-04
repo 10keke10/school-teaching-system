@@ -2,15 +2,8 @@
   <div class="app-container">
     <!-- 检索区 -->
     <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="68px">
-      <el-form-item label="学期" prop="termId">
-        <el-select v-model="queryParams.termId" placeholder="请选择学期" clearable>
-          <el-option
-            v-for="item in termOptions"
-            :key="item.termId"
-            :label="item.termName"
-            :value="item.termId"
-          />
-        </el-select>
+      <el-form-item label="学期">
+        <el-tag type="info">{{ currentTermName || '未设置当前学期' }}</el-tag>
       </el-form-item>
       <el-form-item label="课程名称" prop="courseName">
         <el-input
@@ -26,13 +19,7 @@
       </el-form-item>
     </el-form>
 
-    <!-- 工具栏 -->
-    <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5">
-        <el-button type="primary" plain icon="Refresh" @click="handleRefresh">刷新</el-button>
-      </el-col>
-      <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
-    </el-row>
+    <!-- 工具栏已移除 -->
 
     <!-- 课程表 -->
     <el-table v-loading="loading" :data="courseList" @selection-change="handleSelectionChange">
@@ -42,8 +29,9 @@
       <el-table-column label="上课时间" align="center" prop="classTime" width="150" />
       <el-table-column label="上课地点" align="center" prop="location" width="120" />
       <el-table-column label="教师" align="center" prop="teacherName" width="100" />
+      <el-table-column label="学期" align="center" prop="termName" width="150" />
       <el-table-column label="学分" align="center" prop="creditHours" width="80" />
-      <el-table-column label="容量/已选" align="center" width="120">
+      <el-table-column label="已选/容量" align="center" width="120">
         <template #default="scope">
           <el-tag :type="scope.row.selectedCount >= scope.row.capacity ? 'danger' : 'success'">
             {{ scope.row.selectedCount }}/{{ scope.row.capacity }}
@@ -112,21 +100,14 @@ import { listAvailableCourses, enrollCourse, dropCourse } from '@/api/edu/studen
 const queryParams = reactive({
   pageNum: 1,
   pageSize: 10,
-  termId: undefined,
   courseName: ''
 })
 
 const loading = ref(true)
 const total = ref(0)
 const courseList = ref([])
-const showSearch = ref(true)
 const useMock = ref(false)
-
-// 学期选项（可按需从后端拉取，这里先固定两条）
-const termOptions = ref([
-  { termId: '2024-2025-1', termName: '2024-2025秋季学期' },
-  { termId: '2024-2025-2', termName: '2024-2025冬季学期' }
-])
+const currentTermName = ref('')
 
 /** 查询课程列表 */
 function getList() {
@@ -142,6 +123,7 @@ function getList() {
           classTime: item.class_time || item.classTime,
           location: item.location,
           teacherName: item.teacher_name || item.teacherName,
+          termName: item.term_name || item.termName,
           creditHours: item.credit_hours || item.creditHours,
           capacity: item.capacity,
           selectedCount: item.selected_count || item.selectedCount || 0,
@@ -150,10 +132,12 @@ function getList() {
         }
       })
       total.value = data.total || courseList.value.length
+      currentTermName.value = data.termName || ''
     })
     .catch(() => {
       courseList.value = []
       total.value = 0
+      currentTermName.value = ''
     })
     .finally(() => {
       loading.value = false
@@ -169,15 +153,12 @@ function handleQuery() {
 
 /** 重置 */
 function resetQuery() {
-  queryParams.termId = undefined
   queryParams.courseName = ''
   handleQuery()
 }
 
 /** 刷新 */
-function handleRefresh() {
-  getList()
-}
+function handleRefresh() {}
 
 /** 多选变更 */
 function handleSelectionChange() {
@@ -191,9 +172,11 @@ function handleEnroll(row) {
     .then(response => {
       ElMessage.success(response.msg || '选课成功')
       getList()
+      window.dispatchEvent(new CustomEvent('edu_enrollment_changed'))
     })
     .catch(error => {
       ElMessage.error(error.msg || '选课失败')
+      getList()
     })
 }
 
@@ -208,6 +191,7 @@ function handleDrop(row) {
     .then(response => {
       ElMessage.success(response.msg || '退课成功')
       getList()
+      window.dispatchEvent(new CustomEvent('edu_enrollment_changed'))
     })
     .catch(error => {
       ElMessage.error(error.msg || '退课失败')

@@ -45,8 +45,8 @@ public class Term extends BaseEntity {
     @Excel(name = "退课截止时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date dropDeadline;
 
-    /** 是否当前学期（1是，0否） */
-    @Excel(name = "是否当前学期")
+    /** 当前该学期是否可选课（1是，0否） */
+    @Excel(name = "是否开放选课")
     private Integer isActive;
 
     /** 备注 */

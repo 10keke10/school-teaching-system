@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS course_bak_20260104 LIKE course;
+INSERT INTO course_bak_20260104 SELECT * FROM course;
+CREATE TABLE IF NOT EXISTS course_class_bak_20260104 LIKE course_class;
+INSERT INTO course_class_bak_20260104 SELECT * FROM course_class;
+CREATE TABLE IF NOT EXISTS term_bak_20260104 LIKE term;
+INSERT INTO term_bak_20260104 SELECT * FROM term;
+CREATE TABLE IF NOT EXISTS enrollment_bak_20260104 LIKE enrollment;
+INSERT INTO enrollment_bak_20260104 SELECT * FROM enrollment;

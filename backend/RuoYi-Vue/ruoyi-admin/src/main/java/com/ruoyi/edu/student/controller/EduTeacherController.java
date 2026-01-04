@@ -8,6 +8,8 @@ import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.edu.domain.Enrollment;
 import com.ruoyi.edu.student.mapper.EnrollmentMapper;
+import com.ruoyi.system.mapper.SysUserMapper;
+import com.ruoyi.common.core.domain.entity.SysUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,9 @@ public class EduTeacherController extends BaseController {
 
     @Autowired
     private com.ruoyi.edu.student.mapper.CourseClassMapper courseClassMapper;
+
+    @Autowired
+    private SysUserMapper sysUserMapper;
 
     /**
      * GET /edu/teacher/classes - 获取教师所教的所有班级
@@ -58,29 +63,24 @@ public class EduTeacherController extends BaseController {
         if (!courseClass.getTeacherId().equals(teacherId)) {
             return getDataTable(new ArrayList<>());
         }
-        
+
         startPage();
 
         List<Map<String, Object>> students = new ArrayList<>();
         List<Enrollment> enrollments = enrollmentMapper.selectByClassId(classId);
         if (enrollments != null) {
             for (Enrollment enrollment : enrollments) {
+                if (enrollment.getStatus() != null && !"ENROLLED".equals(enrollment.getStatus())) {
+                    continue;
+                }
+                SysUser user = sysUserMapper.selectUserById(enrollment.getStudentId());
                 Map<String, Object> student = new HashMap<>();
                 student.put("enrollmentId", enrollment.getEnrollmentId());
-                student.put("studentId", enrollment.getStudentId());
-                student.put("studentName", "学生" + enrollment.getStudentId());
+                student.put("studentId", user != null ? user.getUserId() : enrollment.getStudentId());
+                student.put("studentName", user != null ? user.getNickName() : ("学生" + enrollment.getStudentId()));
                 student.put("grade", enrollment.getGrade());
                 student.put("gradeStatus", enrollment.getGradeStatus());
                 students.add(student);
-            }
-        }
-
-        // 查询学生姓名（从sys_user表）
-        for (Map<String, Object> student : students) {
-            Long studentId = (Long) student.get("studentId");
-            // 这里可以调用用户服务获取真实姓名，暂时使用ID
-            if (student.get("studentName") == null || student.get("studentName").toString().startsWith("学生")) {
-                student.put("studentName", "学生" + studentId);
             }
         }
 
@@ -100,7 +100,7 @@ public class EduTeacherController extends BaseController {
         }
 
         Long teacherId = SecurityUtils.getUserId();
-        
+
         // 验证所有选课记录都属于当前教师的班级
         for (Map<String, Object> update : gradeUpdates) {
             Object enrollmentIdObj = update.get("enrollmentId");
@@ -110,7 +110,8 @@ public class EduTeacherController extends BaseController {
             Long enrollmentId = Long.valueOf(enrollmentIdObj.toString());
             Enrollment enrollment = enrollmentMapper.selectEnrollmentById(enrollmentId);
             if (enrollment != null) {
-                com.ruoyi.edu.domain.CourseClass courseClass = courseClassMapper.selectCourseClassById(enrollment.getClassId());
+                com.ruoyi.edu.domain.CourseClass courseClass = courseClassMapper
+                        .selectCourseClassById(enrollment.getClassId());
                 if (courseClass != null && !courseClass.getTeacherId().equals(teacherId)) {
                     return AjaxResult.error("无权操作该选课记录");
                 }
@@ -158,7 +159,7 @@ public class EduTeacherController extends BaseController {
 
         Long classId = Long.valueOf(classIdObj.toString());
         Long teacherId = SecurityUtils.getUserId();
-        
+
         // 验证该班级是否属于当前教师
         com.ruoyi.edu.domain.CourseClass courseClass = courseClassMapper.selectCourseClassById(classId);
         if (courseClass == null) {
@@ -167,7 +168,7 @@ public class EduTeacherController extends BaseController {
         if (!courseClass.getTeacherId().equals(teacherId)) {
             return AjaxResult.error("无权操作该班级");
         }
-        
+
         List<Enrollment> enrollments = enrollmentMapper.selectByClassId(classId);
         if (enrollments != null) {
             for (Enrollment enrollment : enrollments) {
@@ -186,7 +187,7 @@ public class EduTeacherController extends BaseController {
     @GetMapping("/classes/{id}/statistics")
     public AjaxResult getClassStatistics(@PathVariable("id") Long classId) {
         Long teacherId = SecurityUtils.getUserId();
-        
+
         // 验证该班级是否属于当前教师
         com.ruoyi.edu.domain.CourseClass courseClass = courseClassMapper.selectCourseClassById(classId);
         if (courseClass == null) {
@@ -195,7 +196,7 @@ public class EduTeacherController extends BaseController {
         if (!courseClass.getTeacherId().equals(teacherId)) {
             return AjaxResult.error("无权查看该班级统计");
         }
-        
+
         Map<String, Object> statistics = enrollmentMapper.selectClassGradeStatistics(classId);
         if (statistics == null || statistics.isEmpty()) {
             // 返回默认值

@@ -66,4 +66,5 @@ async function loadGradeList() {
 }
 
 onMounted(loadGradeList)
+window.addEventListener('edu_enrollment_changed', loadGradeList)
 </script>
