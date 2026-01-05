@@ -48,7 +48,7 @@
       <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button
-            v-if="!scope.row.enrolled && scope.row.selectedCount < scope.row.capacity"
+            v-if="!scope.row.enrolled"
             type="primary"
             link
             icon="CirclePlus"

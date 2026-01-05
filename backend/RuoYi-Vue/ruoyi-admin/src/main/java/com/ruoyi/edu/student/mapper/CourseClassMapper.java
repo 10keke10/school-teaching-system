@@ -12,6 +12,8 @@ import java.util.Map;
 public interface CourseClassMapper {
 
         CourseClass selectCourseClassById(Long classId);
+        
+        CourseClass selectCourseClassByIdForUpdate(Long classId);
 
         /**
          * 查询可选课程列表（按学期过滤，可带学生ID标记已选）

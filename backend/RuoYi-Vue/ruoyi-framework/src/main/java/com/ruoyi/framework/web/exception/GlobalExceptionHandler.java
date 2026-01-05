@@ -1,6 +1,8 @@
 package com.ruoyi.framework.web.exception;
 
+import java.sql.SQLException;
 import javax.servlet.http.HttpServletRequest;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
@@ -28,6 +30,27 @@ import com.ruoyi.common.utils.html.EscapeUtil;
 public class GlobalExceptionHandler
 {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /**
+     * 数据库操作异常
+     */
+    @ExceptionHandler(SQLException.class)
+    public AjaxResult handleSQLException(SQLException e, HttpServletRequest request)
+    {
+        String requestURI = request.getRequestURI();
+        log.error("请求地址'{}',数据库操作异常'{}'", requestURI, e.getMessage());
+        String msg = e.getMessage();
+        if (msg != null) {
+            try {
+                String decoded = new String(msg.getBytes("GBK"), "UTF-8");
+                if (decoded.contains("满") || decoded.contains("full")) {
+                    return AjaxResult.error("选课失败：该教学班已满员");
+                }
+            } catch (Exception ignore) {
+            }
+        }
+        return AjaxResult.error("数据库操作异常");
+    }
 
     /**
      * 权限校验异常

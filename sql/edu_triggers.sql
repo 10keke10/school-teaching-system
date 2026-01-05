@@ -5,9 +5,12 @@
 USE `ry-vue`;
 
 DROP TRIGGER IF EXISTS trg_check_capacity_insert;
+DROP TRIGGER IF EXISTS trg_check_capacity_update;
 DROP TRIGGER IF EXISTS trg_update_selected_count_insert;
 DROP TRIGGER IF EXISTS trg_update_selected_count_delete;
 DROP TRIGGER IF EXISTS trg_update_selected_count_update;
+DROP TRIGGER IF EXISTS trg_sync_slots_insert;
+DROP TRIGGER IF EXISTS trg_sync_slots_update;
 
 DELIMITER $$
 
@@ -77,6 +80,27 @@ BEGIN
         UPDATE course_class
         SET selected_count = selected_count + 1
         WHERE class_id = NEW.class_id;
+    END IF;
+END$$
+
+-- 5. 课表同步触发器 (AFTER INSERT)
+-- 作用：创建教学班时，自动解析上课时间并插入到 class_time_slot 表
+CREATE TRIGGER trg_sync_slots_insert
+AFTER INSERT ON course_class
+FOR EACH ROW
+BEGIN
+    CALL sp_refresh_class_slots(NEW.class_id);
+END$$
+
+-- 6. 课表同步触发器 (AFTER UPDATE)
+-- 作用：更新教学班时间时，自动重新解析上课时间
+CREATE TRIGGER trg_sync_slots_update
+AFTER UPDATE ON course_class
+FOR EACH ROW
+BEGIN
+    -- 仅当 class_time 发生变化时才执行
+    IF OLD.class_time != NEW.class_time OR (OLD.class_time IS NULL AND NEW.class_time IS NOT NULL) OR (OLD.class_time IS NOT NULL AND NEW.class_time IS NULL) THEN
+        CALL sp_refresh_class_slots(NEW.class_id);
     END IF;
 END$$
 

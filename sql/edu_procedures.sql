@@ -7,6 +7,7 @@ USE `ry-vue`;
 -- 删除已有的存储过程（如果存在）
 DROP PROCEDURE IF EXISTS sp_calc_student_credits;
 DROP PROCEDURE IF EXISTS sp_check_enrollment_eligible;
+DROP PROCEDURE IF EXISTS sp_refresh_class_slots;
 DROP FUNCTION IF EXISTS fn_get_student_credits;
 
 DELIMITER $$
@@ -69,6 +70,62 @@ BEGIN
     ELSE
         SET p_is_eligible = TRUE;
         SET p_error_message = NULL;
+    END IF;
+END$$
+
+-- 存储过程：解析时间字符串并更新 slot 表
+-- 供触发器调用，自动同步 class_time_slot
+CREATE PROCEDURE sp_refresh_class_slots(IN p_class_id BIGINT)
+BEGIN
+    DECLARE v_time_str VARCHAR(255);
+    DECLARE v_segment VARCHAR(255);
+    DECLARE v_week_day INT;
+    DECLARE v_start INT;
+    DECLARE v_end INT;
+    DECLARE v_comma_pos INT;
+    DECLARE v_dash_pos INT;
+    DECLARE v_jie_pos INT;
+    
+    DELETE FROM class_time_slot WHERE class_id = p_class_id;
+    SELECT class_time INTO v_time_str FROM course_class WHERE class_id = p_class_id;
+    
+    IF v_time_str IS NOT NULL AND v_time_str != '' THEN
+        SET v_time_str = CONCAT(v_time_str, ',');
+        parse_loop: WHILE CHAR_LENGTH(v_time_str) > 0 DO
+            SET v_comma_pos = LOCATE(',', v_time_str);
+            IF v_comma_pos = 0 THEN
+                SET v_segment = v_time_str;
+                SET v_time_str = '';
+            ELSE
+                SET v_segment = TRIM(SUBSTRING(v_time_str, 1, v_comma_pos - 1));
+                SET v_time_str = SUBSTRING(v_time_str, v_comma_pos + 1);
+            END IF;
+            
+            IF CHAR_LENGTH(v_segment) > 0 THEN
+                SET v_week_day = 0;
+                IF v_segment LIKE '%周一%' THEN SET v_week_day = 1;
+                ELSEIF v_segment LIKE '%周二%' THEN SET v_week_day = 2;
+                ELSEIF v_segment LIKE '%周三%' THEN SET v_week_day = 3;
+                ELSEIF v_segment LIKE '%周四%' THEN SET v_week_day = 4;
+                ELSEIF v_segment LIKE '%周五%' THEN SET v_week_day = 5;
+                ELSEIF v_segment LIKE '%周六%' THEN SET v_week_day = 6;
+                ELSEIF v_segment LIKE '%周日%' THEN SET v_week_day = 7;
+                END IF;
+                
+                IF v_week_day > 0 THEN
+                    SET v_dash_pos = LOCATE('-', v_segment);
+                    SET v_jie_pos = LOCATE('节', v_segment);
+                    IF v_dash_pos > 0 AND v_jie_pos > v_dash_pos THEN
+                        SET v_start = CAST(SUBSTRING(v_segment, 3, v_dash_pos - 3) AS UNSIGNED);
+                        SET v_end = CAST(SUBSTRING(v_segment, v_dash_pos + 1, v_jie_pos - v_dash_pos - 1) AS UNSIGNED);
+                        IF v_start > 0 AND v_end >= v_start THEN
+                            INSERT INTO class_time_slot (class_id, week_day, start_slot, end_slot, create_time, update_time)
+                            VALUES (p_class_id, v_week_day, v_start, v_end, NOW(), NOW());
+                        END IF;
+                    END IF;
+                END IF;
+            END IF;
+        END WHILE parse_loop;
     END IF;
 END$$
 

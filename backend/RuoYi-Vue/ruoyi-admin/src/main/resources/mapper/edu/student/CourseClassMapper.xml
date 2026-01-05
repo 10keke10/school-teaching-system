@@ -23,6 +23,10 @@
         select * from course_class where class_id = #{classId}
     </select>
 
+    <select id="selectCourseClassByIdForUpdate" parameterType="Long" resultMap="CourseClassResult">
+        select * from course_class where class_id = #{classId} for update
+    </select>
+
     <select id="selectAvailableCoursesPaged" resultType="map">
         select
             cc.class_id,

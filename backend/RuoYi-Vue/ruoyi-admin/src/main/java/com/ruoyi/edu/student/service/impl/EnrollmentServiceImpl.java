@@ -43,14 +43,28 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AjaxResult enrollCourse(Long studentId, Long classId) {
-        CourseClass courseClass = courseClassMapper.selectCourseClassById(classId);
+        // 使用悲观锁查询课程班级信息，防止并发选课导致超量
+        CourseClass courseClass = courseClassMapper.selectCourseClassByIdForUpdate(classId);
         if (courseClass == null) {
             return AjaxResult.error("教学班不存在");
         }
         if (courseClass.getStatus() != null && courseClass.getStatus() != 1) {
             return AjaxResult.error("课程未开放选课");
         }
+        
+        // 校验容量 (双重保障：Java层悲观锁校验 + 数据库触发器)
+        if (courseClass.getCapacity() != null && courseClass.getSelectedCount() != null 
+                && courseClass.getSelectedCount() >= courseClass.getCapacity()) {
+            return AjaxResult.error("课程容量已满，无法选课");
+        }
+
         // 重复选课（存在已选记录）
+        // 优先检查有效选课记录
+        Enrollment active = enrollmentMapper.selectActiveByStudentAndClass(studentId, classId);
+        if (active != null) {
+            return AjaxResult.error("已选该课程，不能重复选课");
+        }
+
         Enrollment existed = enrollmentMapper.selectByStudentAndClass(studentId, classId);
         if (existed != null) {
             if ("ENROLLED".equals(existed.getStatus())) {
@@ -79,11 +93,16 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
                 existed.setEnrollTime(new Date());
                 existed.setGradeStatus("DRAFT");
                 existed.setUpdateTime(new Date());
-                int updated = enrollmentMapper.updateEnrollment(existed);
-                if (updated > 0) {
-                    return AjaxResult.success("选课成功");
+
+                try {
+                    int updated = enrollmentMapper.updateEnrollment(existed);
+                    if (updated > 0) {
+                        return AjaxResult.success("选课成功");
+                    }
+                    return AjaxResult.error("选课失败");
+                } catch (Exception e) {
+                    return handleEnrollmentException(e);
                 }
-                return AjaxResult.error("选课失败");
             }
             // 其他状态一律视为不可重复选
             return AjaxResult.error("已存在该课程记录，无法重复选课");
@@ -120,25 +139,30 @@ public class EnrollmentServiceImpl implements IEnrollmentService {
                 return AjaxResult.success("选课成功");
             }
             return AjaxResult.error("选课失败");
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            // 捕获数据库完整性约束异常（可能是触发器抛出的容量已满错误）
-            String errorMsg = e.getMessage();
-            if (errorMsg != null && (errorMsg.contains("容量") || errorMsg.contains("capacity")
-                    || errorMsg.contains("已满") || errorMsg.contains("full"))) {
-                return AjaxResult.error("课程容量已满，无法选课");
-            }
-            // 其他数据库异常
-            return AjaxResult.error("选课失败：" + (errorMsg != null ? errorMsg : "数据库操作异常"));
-
         } catch (Exception e) {
-            // 捕获其他异常
-            String errorMsg = e.getMessage();
-            if (errorMsg != null && (errorMsg.contains("容量") || errorMsg.contains("capacity")
-                    || errorMsg.contains("已满") || errorMsg.contains("full"))) {
-                return AjaxResult.error("课程容量已满，无法选课");
-            }
-            return AjaxResult.error("选课失败：" + (errorMsg != null ? errorMsg : "未知错误"));
+            return handleEnrollmentException(e);
         }
+    }
+
+    private AjaxResult handleEnrollmentException(Exception e) {
+        String errorMsg = e.getMessage();
+        // 尝试修复乱码 (UTF-8 bytes interpreted as GBK)
+        if (errorMsg != null) {
+            try {
+                String decoded = new String(errorMsg.getBytes("GBK"), "UTF-8");
+                if (decoded.contains("满") || decoded.contains("full")) {
+                    return AjaxResult.error("选课失败：该教学班已满员");
+                }
+            } catch (Exception ignore) {
+            }
+        }
+
+        if (errorMsg != null && (errorMsg.contains("容量") || errorMsg.contains("capacity")
+                || errorMsg.contains("已满") || errorMsg.contains("full"))) {
+            return AjaxResult.error("课程容量已满，无法选课");
+        }
+        return AjaxResult.error("选课失败：" + (errorMsg != null ? errorMsg : "数据库操作异常"));
+
     }
 
     @Override
