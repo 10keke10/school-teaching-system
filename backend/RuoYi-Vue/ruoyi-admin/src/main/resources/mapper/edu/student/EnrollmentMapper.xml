@@ -139,6 +139,17 @@
         </foreach>
     </delete>
 
+    <delete id="deleteByClassId" parameterType="Long">
+        delete from enrollment where class_id = #{classId}
+    </delete>
+
+    <delete id="deleteByClassIds" parameterType="String">
+        delete from enrollment where class_id in
+        <foreach item="classId" collection="array" open="(" separator="," close=")">
+            #{classId}
+        </foreach>
+    </delete>
+
     <select id="countEnrolledByClassId" resultType="int">
         select count(1) from enrollment
         where class_id = #{classId} and status = 'ENROLLED'

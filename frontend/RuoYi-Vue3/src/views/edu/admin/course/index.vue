@@ -17,12 +17,6 @@
           @keyup.enter="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="课程类型" prop="courseType">
-        <el-select v-model="queryParams.courseType" placeholder="请选择课程类型" clearable>
-          <el-option label="必修" value="必修" />
-          <el-option label="选修" value="选修" />
-        </el-select>
-      </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
         <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -113,12 +107,6 @@
         <el-form-item label="学分" prop="creditHours">
           <el-input-number v-model="form.creditHours" :min="0" :max="20" label="学分"></el-input-number>
         </el-form-item>
-        <el-form-item label="课程类型" prop="courseType">
-          <el-select v-model="form.courseType" placeholder="请选择课程类型">
-            <el-option label="必修" value="必修" />
-            <el-option label="选修" value="选修" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="课程描述" prop="description">
           <el-input v-model="form.description" type="textarea" placeholder="请输入内容" />
         </el-form-item>
@@ -158,7 +146,6 @@ const data = reactive({
     pageSize: 10,
     courseCode: null,
     courseName: null,
-    courseType: null,
     deptId: null
   },
   rules: {

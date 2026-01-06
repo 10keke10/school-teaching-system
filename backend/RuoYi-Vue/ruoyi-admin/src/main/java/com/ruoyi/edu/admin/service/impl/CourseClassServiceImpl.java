@@ -3,8 +3,10 @@ package com.ruoyi.edu.admin.service.impl;
 import java.util.List;
 import com.ruoyi.common.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import com.ruoyi.edu.admin.mapper.AdminCourseClassMapper;
+import com.ruoyi.edu.student.mapper.EnrollmentMapper;
 import com.ruoyi.edu.domain.CourseClass;
 import com.ruoyi.edu.admin.service.ICourseClassService;
 
@@ -19,6 +21,8 @@ public class CourseClassServiceImpl implements ICourseClassService
 {
     @Autowired
     private AdminCourseClassMapper courseClassMapper;
+    @Autowired
+    private EnrollmentMapper enrollmentMapper;
 
     /**
      * 查询教学班
@@ -77,8 +81,10 @@ public class CourseClassServiceImpl implements ICourseClassService
      * @return 结果
      */
     @Override
+    @Transactional
     public int deleteCourseClassByIds(Long[] classIds)
     {
+        enrollmentMapper.deleteByClassIds(classIds);
         return courseClassMapper.deleteCourseClassByIds(classIds);
     }
 
@@ -89,8 +95,10 @@ public class CourseClassServiceImpl implements ICourseClassService
      * @return 结果
      */
     @Override
+    @Transactional
     public int deleteCourseClassById(Long classId)
     {
+        enrollmentMapper.deleteByClassId(classId);
         return courseClassMapper.deleteCourseClassById(classId);
     }
 }

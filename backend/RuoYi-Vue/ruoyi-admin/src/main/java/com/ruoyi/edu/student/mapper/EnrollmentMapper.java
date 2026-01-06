@@ -109,6 +109,10 @@ public interface EnrollmentMapper {
      */
     int deleteEnrollmentByIds(Long[] enrollmentIds);
 
+    int deleteByClassId(Long classId);
+
+    int deleteByClassIds(Long[] classIds);
+
     /**
      * 查询班级成绩统计（平均分等）
      */
